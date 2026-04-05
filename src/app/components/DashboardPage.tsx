@@ -1,29 +1,53 @@
+import { useEffect, useMemo } from "react";
 import { ProtectedRoute } from "./ProtectedRoute";
 import { Navbar } from "./Navbar";
 import { useAuth } from "../contexts/AuthContext";
 import { useTransactions } from "../contexts/TransactionContext";
 import { TrendingUp, TrendingDown, Wallet, Plus } from "lucide-react";
-import { Link } from "react-router";
+import { Link } from "react-router-dom";
 
 export function DashboardPage() {
   const { user } = useAuth();
-  const { transactions } = useTransactions();
+  const { transactions, categories, loadTransactions } = useTransactions();
 
-  const userTransactions = transactions.filter(t => t.userId === user?.id);
-  
-  const totalIncome = userTransactions
-    .filter(t => t.type === 'income')
-    .reduce((sum, t) => sum + t.amount, 0);
-  
-  const totalExpense = userTransactions
-    .filter(t => t.type === 'expense')
-    .reduce((sum, t) => sum + t.amount, 0);
-  
+  useEffect(() => {
+    if (user?.id) {
+      loadTransactions();
+    }
+  }, [user?.id]);
+
+  const getCategoryName = (categoryId: string) => {
+    const category = categories.find((c) => c.id === categoryId);
+    return category ? category.name : "Sin categoría";
+  };
+
+  const userTransactions = useMemo(() => {
+    return transactions.filter((t) => t.userId === user?.id);
+  }, [transactions, user?.id]);
+
+  const totalIncome = useMemo(() => {
+    return userTransactions
+      .filter((t) => t.type === "income")
+      .reduce((sum, t) => sum + t.amount, 0);
+  }, [userTransactions]);
+
+  const totalExpense = useMemo(() => {
+    return userTransactions
+      .filter((t) => t.type === "expense")
+      .reduce((sum, t) => sum + t.amount, 0);
+  }, [userTransactions]);
+
   const balance = totalIncome - totalExpense;
 
-  const recentTransactions = userTransactions
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-    .slice(0, 5);
+  const recentTransactions = useMemo(() => {
+    return [...userTransactions]
+      .sort(
+        (a, b) =>
+          new Date(b.transactionDate).getTime() -
+          new Date(a.transactionDate).getTime()
+      )
+      .slice(0, 5);
+  }, [userTransactions]);
 
   return (
     <ProtectedRoute>
@@ -139,9 +163,11 @@ export function DashboardPage() {
                           )}
                         </div>
                         <div>
-                          <p className="text-gray-900">{transaction.category}</p>
+                          <p className="text-gray-900">
+                            {getCategoryName(transaction.categoryId)}
+                          </p>
                           <p className="text-sm text-gray-500">
-                            {new Date(transaction.date).toLocaleDateString('es-ES', {
+                            {new Date(transaction.transactionDate).toLocaleDateString('es-ES', {
                               day: 'numeric',
                               month: 'long',
                               year: 'numeric'

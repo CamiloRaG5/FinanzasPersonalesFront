@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { ProtectedRoute } from "./ProtectedRoute";
 import { Navbar } from "./Navbar";
 import { useAuth } from "../contexts/AuthContext";
@@ -7,29 +7,48 @@ import { TrendingUp, TrendingDown, History, Search } from "lucide-react";
 
 export function TransactionHistoryPage() {
   const { user } = useAuth();
-  const { transactions } = useTransactions();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState<'all' | 'income' | 'expense'>('all');
+  const { transactions, categories, loadTransactions } = useTransactions();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterType, setFilterType] = useState<"all" | "income" | "expense">(
+    "all"
+  );
+
+  useEffect(() => {
+    loadTransactions();
+  }, []);
+
+  const getCategoryName = (categoryId: string) => {
+    const category = categories.find((c) => c.id === categoryId);
+    return category ? category.name : "Sin categoría";
+  };
 
   const userTransactions = useMemo(() => {
     return transactions
-      .filter(t => t.userId === user?.id)
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      .filter((t) => t.userId === user?.id)
+      .sort(
+        (a, b) =>
+          new Date(b.transactionDate).getTime() -
+          new Date(a.transactionDate).getTime()
+      );
   }, [transactions, user?.id]);
 
   const filteredTransactions = useMemo(() => {
-    return userTransactions.filter(transaction => {
-      const matchesSearch = transaction.category.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesType = filterType === 'all' || transaction.type === filterType;
+    return userTransactions.filter((transaction) => {
+      const categoryName = getCategoryName(transaction.categoryId);
+      const matchesSearch = categoryName
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase());
+      const matchesType =
+        filterType === "all" || transaction.type === filterType;
       return matchesSearch && matchesType;
     });
-  }, [userTransactions, searchTerm, filterType]);
+  }, [userTransactions, searchTerm, filterType, categories]);
 
   return (
     <ProtectedRoute>
       <div className="min-h-screen bg-gray-50">
         <Navbar />
-        
+
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="mb-8">
             <div className="flex items-center space-x-4 mb-6">
@@ -37,9 +56,14 @@ export function TransactionHistoryPage() {
                 <History className="w-6 h-6 text-blue-600" />
               </div>
               <div>
-                <h1 className="text-3xl text-gray-900">Historial de Transacciones</h1>
+                <h1 className="text-3xl text-gray-900">
+                  Historial de Transacciones
+                </h1>
                 <p className="text-gray-600">
-                  {userTransactions.length} {userTransactions.length === 1 ? 'transacción registrada' : 'transacciones registradas'}
+                  {userTransactions.length}{" "}
+                  {userTransactions.length === 1
+                    ? "transacción registrada"
+                    : "transacciones registradas"}
                 </p>
               </div>
             </div>
@@ -60,31 +84,31 @@ export function TransactionHistoryPage() {
 
                 <div className="flex space-x-2">
                   <button
-                    onClick={() => setFilterType('all')}
+                    onClick={() => setFilterType("all")}
                     className={`flex-1 py-2 px-4 rounded-lg transition-colors ${
-                      filterType === 'all'
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      filterType === "all"
+                        ? "bg-blue-600 text-white"
+                        : "bg-gray-200 text-gray-700 hover:bg-gray-300"
                     }`}
                   >
                     Todas
                   </button>
                   <button
-                    onClick={() => setFilterType('income')}
+                    onClick={() => setFilterType("income")}
                     className={`flex-1 py-2 px-4 rounded-lg transition-colors ${
-                      filterType === 'income'
-                        ? 'bg-green-600 text-white'
-                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      filterType === "income"
+                        ? "bg-green-600 text-white"
+                        : "bg-gray-200 text-gray-700 hover:bg-gray-300"
                     }`}
                   >
                     Ingresos
                   </button>
                   <button
-                    onClick={() => setFilterType('expense')}
+                    onClick={() => setFilterType("expense")}
                     className={`flex-1 py-2 px-4 rounded-lg transition-colors ${
-                      filterType === 'expense'
-                        ? 'bg-red-600 text-white'
-                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      filterType === "expense"
+                        ? "bg-red-600 text-white"
+                        : "bg-gray-200 text-gray-700 hover:bg-gray-300"
                     }`}
                   >
                     Gastos
@@ -100,57 +124,84 @@ export function TransactionHistoryPage() {
               <div className="p-12 text-center">
                 <History className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                 <p className="text-gray-500 text-lg mb-2">
-                  {userTransactions.length === 0 
-                    ? 'No hay transacciones disponibles'
-                    : 'No se encontraron transacciones'}
+                  {userTransactions.length === 0
+                    ? "No hay transacciones disponibles"
+                    : "No se encontraron transacciones"}
                 </p>
                 <p className="text-sm text-gray-400">
-                  {userTransactions.length === 0 
-                    ? 'Comienza agregando tu primer ingreso o gasto'
-                    : 'Intenta con otro filtro o búsqueda'}
+                  {userTransactions.length === 0
+                    ? "Comienza agregando tu primer ingreso o gasto"
+                    : "Intenta con otro filtro o búsqueda"}
                 </p>
               </div>
             ) : (
               <div className="divide-y divide-gray-200">
                 {filteredTransactions.map((transaction) => (
-                  <div key={transaction.id} className="p-4 hover:bg-gray-50 transition-colors">
+                  <div
+                    key={transaction.id}
+                    className="p-4 hover:bg-gray-50 transition-colors"
+                  >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-4 flex-1">
-                        <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
-                          transaction.type === 'income' ? 'bg-green-100' : 'bg-red-100'
-                        }`}>
-                          {transaction.type === 'income' ? (
+                        <div
+                          className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
+                            transaction.type === "income"
+                              ? "bg-green-100"
+                              : "bg-red-100"
+                          }`}
+                        >
+                          {transaction.type === "income" ? (
                             <TrendingUp className="w-6 h-6 text-green-600" />
                           ) : (
                             <TrendingDown className="w-6 h-6 text-red-600" />
                           )}
                         </div>
+
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center space-x-3">
-                            <p className="text-gray-900">{transaction.category}</p>
-                            <span className={`px-2 py-1 rounded-full text-xs ${
-                              transaction.type === 'income'
-                                ? 'bg-green-100 text-green-700'
-                                : 'bg-red-100 text-red-700'
-                            }`}>
-                              {transaction.type === 'income' ? 'Ingreso' : 'Gasto'}
+                            <p className="text-gray-900">
+                              {getCategoryName(transaction.categoryId)}
+                            </p>
+                            <span
+                              className={`px-2 py-1 rounded-full text-xs ${
+                                transaction.type === "income"
+                                  ? "bg-green-100 text-green-700"
+                                  : "bg-red-100 text-red-700"
+                              }`}
+                            >
+                              {transaction.type === "income"
+                                ? "Ingreso"
+                                : "Gasto"}
                             </span>
                           </div>
+
+                          <p className="text-sm text-gray-600 mt-1">
+                            {transaction.description}
+                          </p>
+
                           <p className="text-sm text-gray-500 mt-1">
-                            {new Date(transaction.date).toLocaleDateString('es-ES', {
-                              weekday: 'long',
-                              day: 'numeric',
-                              month: 'long',
-                              year: 'numeric'
+                            {new Date(
+                              transaction.transactionDate
+                            ).toLocaleDateString("es-ES", {
+                              weekday: "long",
+                              day: "numeric",
+                              month: "long",
+                              year: "numeric",
                             })}
                           </p>
                         </div>
                       </div>
+
                       <div className="text-right">
-                        <p className={`text-xl ${
-                          transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
-                        }`}>
-                          {transaction.type === 'income' ? '+' : '-'}${transaction.amount.toFixed(2)}
+                        <p
+                          className={`text-xl ${
+                            transaction.type === "income"
+                              ? "text-green-600"
+                              : "text-red-600"
+                          }`}
+                        >
+                          {transaction.type === "income" ? "+" : "-"}$
+                          {transaction.amount.toFixed(2)}
                         </p>
                       </div>
                     </div>
@@ -166,14 +217,19 @@ export function TransactionHistoryPage() {
               <h3 className="text-lg text-gray-900 mb-4">Resumen del Filtro</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <p className="text-sm text-gray-600 mb-1">Total Transacciones</p>
-                  <p className="text-2xl text-blue-600">{filteredTransactions.length}</p>
+                  <p className="text-sm text-gray-600 mb-1">
+                    Total Transacciones
+                  </p>
+                  <p className="text-2xl text-blue-600">
+                    {filteredTransactions.length}
+                  </p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-600 mb-1">Total Ingresos</p>
                   <p className="text-2xl text-green-600">
-                    ${filteredTransactions
-                      .filter(t => t.type === 'income')
+                    $
+                    {filteredTransactions
+                      .filter((t) => t.type === "income")
                       .reduce((sum, t) => sum + t.amount, 0)
                       .toFixed(2)}
                   </p>
@@ -181,8 +237,9 @@ export function TransactionHistoryPage() {
                 <div>
                   <p className="text-sm text-gray-600 mb-1">Total Gastos</p>
                   <p className="text-2xl text-red-600">
-                    ${filteredTransactions
-                      .filter(t => t.type === 'expense')
+                    $
+                    {filteredTransactions
+                      .filter((t) => t.type === "expense")
                       .reduce((sum, t) => sum + t.amount, 0)
                       .toFixed(2)}
                   </p>
