@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router";
 import { useAuth } from "../contexts/AuthContext";
 import { LogOut, Menu, X } from "lucide-react";
 import { useState } from "react";
@@ -39,6 +39,9 @@ export function Navbar() {
             </Link>
             <Link to="/categories" className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md">
               Categorías
+            </Link>
+            <Link to="/budget-progress" className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md">
+              Presupuestos
             </Link>
             
             <div className="flex items-center space-x-4 ml-4 pl-4 border-l border-gray-200">
@@ -105,6 +108,13 @@ export function Navbar() {
               onClick={() => setIsMenuOpen(false)}
             >
               Categorías
+            </Link>
+            <Link
+              to="/budget-progress"
+              className="block text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md"
+              onClick={() => setIsMenuOpen(false)}
+            >
+              Presupuestos
             </Link>
             <div className="border-t border-gray-200 pt-2 mt-2">
               <div className="px-3 py-2 text-sm text-gray-700">

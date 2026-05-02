@@ -1,4 +1,4 @@
-import { createBrowserRouter, Navigate } from "react-router-dom";
+import { createBrowserRouter, Navigate } from "react-router";
 import { RootLayout } from "./components/RootLayout";
 import { RegisterPage } from "./components/RegisterPage";
 import { LoginPage } from "./components/LoginPage";
@@ -7,6 +7,8 @@ import { AddIncomePage } from "./components/AddIncomePage";
 import { AddExpensePage } from "./components/AddExpensePage";
 import { TransactionHistoryPage } from "./components/TransactionHistoryPage";
 import { CategoriesPage } from "./components/CategoriesPage";
+import { CreateBudgetPage } from "./components/CreateBudgetPage";
+import { BudgetProgressPage } from "./components/BudgetProgressPage";
 
 export const router = createBrowserRouter([
   {
@@ -21,6 +23,8 @@ export const router = createBrowserRouter([
       { path: "add-expense", Component: AddExpensePage },
       { path: "history", Component: TransactionHistoryPage },
       { path: "categories", Component: CategoriesPage },
+      { path: "create-budget", Component: CreateBudgetPage },
+      { path: "budget-progress", Component: BudgetProgressPage },
     ],
   },
 ]);

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link } from "react-router";
 import { useAuth } from "../contexts/AuthContext";
 import { Eye, EyeOff, UserPlus } from "lucide-react";
 import { toast } from "sonner";
@@ -38,7 +38,7 @@ export function RegisterPage() {
       return;
     }
 
-    const result = await register(formData.firstName, formData.lastName, formData.email, formData.password, formData.confirmPassword);
+    const result = await register(formData.firstName, formData.lastName, formData.email, formData.password);
     
     if (result.success) {
       toast.success('Registro exitoso');

@@ -1,20 +1,21 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { ProtectedRoute } from "./ProtectedRoute";
 import { Navbar } from "./Navbar";
+import { useAuth } from "../contexts/AuthContext";
 import { useTransactions } from "../contexts/TransactionContext";
 import { TrendingUp } from "lucide-react";
 import { toast } from "sonner";
 
 export function AddIncomePage() {
   const navigate = useNavigate();
-  const { addIncome, categories } = useTransactions();
-
+  const { user } = useAuth();
+  const { addTransaction, categories } = useTransactions();
+  
   const [formData, setFormData] = useState({
-    amount: "",
-    description: "",
-    categoryId: "",
-    transactionDate: new Date().toISOString().split("T")[0],
+    amount: '',
+    category: '',
+    date: new Date().toISOString().split('T')[0],
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -23,62 +24,58 @@ export function AddIncomePage() {
     e.preventDefault();
     setErrors({});
 
+    // Validar monto obligatorio
     if (!formData.amount) {
-      setErrors({ amount: "El campo es obligatorio" });
-      toast.error("El campo monto es obligatorio");
+      setErrors({ amount: 'El campo es obligatorio' });
+      toast.error('El campo monto es obligatorio');
       return;
     }
 
+    // Validar formato numérico
     const amount = parseFloat(formData.amount);
     if (isNaN(amount)) {
-      setErrors({ amount: "El formato es inválido" });
-      toast.error("El formato del monto es inválido");
+      setErrors({ amount: 'El formato es inválido' });
+      toast.error('El formato del monto es inválido');
       return;
     }
 
+    // Validar monto mayor a 0
     if (amount <= 0) {
-      setErrors({ amount: "El monto debe ser mayor a cero" });
-      toast.error("El monto debe ser mayor a cero");
+      setErrors({ amount: 'El monto debe ser mayor a cero' });
+      toast.error('El monto debe ser mayor a cero');
       return;
     }
 
-    if (!formData.categoryId) {
-      setErrors({ categoryId: "Seleccione una categoría" });
-      toast.error("Seleccione una categoría");
+    // Validar categoría obligatoria
+    if (!formData.category) {
+      setErrors({ category: 'Seleccione una categoría' });
+      toast.error('Seleccione una categoría');
       return;
     }
 
-    if (!formData.description.trim()) {
-      setErrors({ description: "La descripción es obligatoria" });
-      toast.error("La descripción es obligatoria");
-      return;
-    }
+    if (!user) return;
 
+    // Simular tiempo de guardado (menos de 2 segundos según requisitos)
     const startTime = Date.now();
-
-    const result = await addIncome(
+    
+    addTransaction({
+      type: 'income',
       amount,
-      formData.categoryId,
-      formData.description,
-      formData.transactionDate
-    );
+      category: formData.category,
+      date: formData.date,
+      userId: user.id,
+    });
 
     const endTime = Date.now();
     const elapsed = endTime - startTime;
 
-    console.log(`Ingreso guardado en ${elapsed}ms`);
+    console.log(`Transacción guardada en ${elapsed}ms`);
 
-    if (result.success) {
-      toast.success("Ingreso registrado correctamente");
-      navigate("/dashboard");
-    } else {
-      toast.error(result.message || "No se pudo registrar el ingreso");
-    }
+    toast.success('Ingreso registrado correctamente');
+    navigate('/dashboard');
   };
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-  ) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
     setErrors({});
   };
@@ -87,7 +84,7 @@ export function AddIncomePage() {
     <ProtectedRoute>
       <div className="min-h-screen bg-gray-50">
         <Navbar />
-
+        
         <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="bg-white rounded-lg shadow-lg p-8">
             <div className="flex items-center space-x-4 mb-6">
@@ -96,24 +93,17 @@ export function AddIncomePage() {
               </div>
               <div>
                 <h1 className="text-2xl text-gray-900">Registrar Ingreso</h1>
-                <p className="text-sm text-gray-600">
-                  Añade un nuevo ingreso a tu cuenta
-                </p>
+                <p className="text-sm text-gray-600">Añade un nuevo ingreso a tu cuenta</p>
               </div>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>
-                <label
-                  htmlFor="amount"
-                  className="block text-sm mb-2 text-gray-700"
-                >
+                <label htmlFor="amount" className="block text-sm mb-2 text-gray-700">
                   Monto *
                 </label>
                 <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">
-                    $
-                  </span>
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">$</span>
                   <input
                     type="text"
                     id="amount"
@@ -121,7 +111,7 @@ export function AddIncomePage() {
                     value={formData.amount}
                     onChange={handleChange}
                     className={`w-full pl-8 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 ${
-                      errors.amount ? "border-red-500" : "border-gray-300"
+                      errors.amount ? 'border-red-500' : 'border-gray-300'
                     }`}
                     placeholder="0.00"
                   />
@@ -132,74 +122,41 @@ export function AddIncomePage() {
               </div>
 
               <div>
-                <label
-                  htmlFor="description"
-                  className="block text-sm mb-2 text-gray-700"
-                >
-                  Descripción *
-                </label>
-                <input
-                  type="text"
-                  id="description"
-                  name="description"
-                  value={formData.description}
-                  onChange={handleChange}
-                  className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 ${
-                    errors.description ? "border-red-500" : "border-gray-300"
-                  }`}
-                  placeholder="Ej: Pago de nómina"
-                />
-                {errors.description && (
-                  <p className="text-sm text-red-600 mt-1">
-                    {errors.description}
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label
-                  htmlFor="categoryId"
-                  className="block text-sm mb-2 text-gray-700"
-                >
+                <label htmlFor="category" className="block text-sm mb-2 text-gray-700">
                   Categoría *
                 </label>
                 <select
-                  id="categoryId"
-                  name="categoryId"
-                  value={formData.categoryId}
+                  id="category"
+                  name="category"
+                  value={formData.category}
                   onChange={handleChange}
                   className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 ${
-                    errors.categoryId ? "border-red-500" : "border-gray-300"
+                    errors.category ? 'border-red-500' : 'border-gray-300'
                   }`}
                 >
                   <option value="">Selecciona una categoría</option>
                   {categories.map((category) => (
-                    <option key={category.id} value={category.id}>
-                      {category.name}
+                    <option key={category} value={category}>
+                      {category}
                     </option>
                   ))}
                 </select>
-                {errors.categoryId && (
-                  <p className="text-sm text-red-600 mt-1">
-                    {errors.categoryId}
-                  </p>
+                {errors.category && (
+                  <p className="text-sm text-red-600 mt-1">{errors.category}</p>
                 )}
               </div>
 
               <div>
-                <label
-                  htmlFor="transactionDate"
-                  className="block text-sm mb-2 text-gray-700"
-                >
+                <label htmlFor="date" className="block text-sm mb-2 text-gray-700">
                   Fecha *
                 </label>
                 <input
                   type="date"
-                  id="transactionDate"
-                  name="transactionDate"
-                  value={formData.transactionDate}
+                  id="date"
+                  name="date"
+                  value={formData.date}
                   onChange={handleChange}
-                  max={new Date().toISOString().split("T")[0]}
+                  max={new Date().toISOString().split('T')[0]}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                 />
               </div>
@@ -213,7 +170,7 @@ export function AddIncomePage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => navigate("/dashboard")}
+                  onClick={() => navigate('/dashboard')}
                   className="flex-1 bg-gray-200 text-gray-700 py-3 rounded-lg hover:bg-gray-300 transition-colors"
                 >
                   Cancelar

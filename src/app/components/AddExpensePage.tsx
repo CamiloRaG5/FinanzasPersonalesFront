@@ -1,20 +1,21 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { ProtectedRoute } from "./ProtectedRoute";
 import { Navbar } from "./Navbar";
+import { useAuth } from "../contexts/AuthContext";
 import { useTransactions } from "../contexts/TransactionContext";
 import { TrendingDown } from "lucide-react";
 import { toast } from "sonner";
 
 export function AddExpensePage() {
   const navigate = useNavigate();
-  const { addExpense, categories } = useTransactions();
-
+  const { user } = useAuth();
+  const { addTransaction, categories } = useTransactions();
+  
   const [formData, setFormData] = useState({
-    amount: "",
-    description: "",
-    categoryId: "",
-    transactionDate: new Date().toISOString().split("T")[0],
+    amount: '',
+    category: '',
+    date: new Date().toISOString().split('T')[0],
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -23,55 +24,50 @@ export function AddExpensePage() {
     e.preventDefault();
     setErrors({});
 
+    // Validar categoría obligatoria
+    if (!formData.category) {
+      setErrors({ category: 'Seleccione una categoría' });
+      toast.error('Seleccione una categoría');
+      return;
+    }
+
+    // Validar monto obligatorio y válido
     if (!formData.amount) {
-      setErrors({ amount: "El campo es obligatorio" });
-      toast.error("El campo monto es obligatorio");
+      setErrors({ amount: 'Monto inválido' });
+      toast.error('Monto inválido');
       return;
     }
 
     const amount = parseFloat(formData.amount);
-    if (isNaN(amount)) {
-      setErrors({ amount: "El formato es inválido" });
-      toast.error("El formato del monto es inválido");
+    if (isNaN(amount) || amount <= 0) {
+      setErrors({ amount: 'Monto inválido' });
+      toast.error('Monto inválido');
       return;
     }
 
-    if (amount <= 0) {
-      setErrors({ amount: "El monto debe ser mayor a cero" });
-      toast.error("El monto debe ser mayor a cero");
-      return;
-    }
+    if (!user) return;
 
-    if (!formData.categoryId) {
-      setErrors({ categoryId: "Seleccione una categoría" });
-      toast.error("Seleccione una categoría");
-      return;
-    }
-
-    if (!formData.description.trim()) {
-      setErrors({ description: "La descripción es obligatoria" });
-      toast.error("La descripción es obligatoria");
-      return;
-    }
-
-    const result = await addExpense(
+    // Simular tiempo de guardado (menos de 2 segundos según requisitos)
+    const startTime = Date.now();
+    
+    addTransaction({
+      type: 'expense',
       amount,
-      formData.categoryId,
-      formData.description,
-      formData.transactionDate
-    );
+      category: formData.category,
+      date: formData.date,
+      userId: user.id,
+    });
 
-    if (result.success) {
-      toast.success("Gasto registrado correctamente");
-      navigate("/dashboard");
-    } else {
-      toast.error(result.message || "No se pudo registrar el gasto");
-    }
+    const endTime = Date.now();
+    const elapsed = endTime - startTime;
+
+    console.log(`Transacción guardada en ${elapsed}ms`);
+
+    toast.success('Gasto registrado correctamente');
+    navigate('/dashboard');
   };
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-  ) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
     setErrors({});
   };
@@ -80,7 +76,7 @@ export function AddExpensePage() {
     <ProtectedRoute>
       <div className="min-h-screen bg-gray-50">
         <Navbar />
-
+        
         <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="bg-white rounded-lg shadow-lg p-8">
             <div className="flex items-center space-x-4 mb-6">
@@ -89,24 +85,42 @@ export function AddExpensePage() {
               </div>
               <div>
                 <h1 className="text-2xl text-gray-900">Registrar Gasto</h1>
-                <p className="text-sm text-gray-600">
-                  Añade un nuevo gasto a tu cuenta
-                </p>
+                <p className="text-sm text-gray-600">Añade un nuevo gasto a tu registro</p>
               </div>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>
-                <label
-                  htmlFor="amount"
-                  className="block text-sm mb-2 text-gray-700"
+                <label htmlFor="category" className="block text-sm mb-2 text-gray-700">
+                  Categoría *
+                </label>
+                <select
+                  id="category"
+                  name="category"
+                  value={formData.category}
+                  onChange={handleChange}
+                  className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 ${
+                    errors.category ? 'border-red-500' : 'border-gray-300'
+                  }`}
                 >
+                  <option value="">Selecciona una categoría</option>
+                  {categories.map((category) => (
+                    <option key={category} value={category}>
+                      {category}
+                    </option>
+                  ))}
+                </select>
+                {errors.category && (
+                  <p className="text-sm text-red-600 mt-1">{errors.category}</p>
+                )}
+              </div>
+
+              <div>
+                <label htmlFor="amount" className="block text-sm mb-2 text-gray-700">
                   Monto *
                 </label>
                 <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">
-                    $
-                  </span>
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">$</span>
                   <input
                     type="text"
                     id="amount"
@@ -114,7 +128,7 @@ export function AddExpensePage() {
                     value={formData.amount}
                     onChange={handleChange}
                     className={`w-full pl-8 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 ${
-                      errors.amount ? "border-red-500" : "border-gray-300"
+                      errors.amount ? 'border-red-500' : 'border-gray-300'
                     }`}
                     placeholder="0.00"
                   />
@@ -125,76 +139,21 @@ export function AddExpensePage() {
               </div>
 
               <div>
-                <label
-                  htmlFor="description"
-                  className="block text-sm mb-2 text-gray-700"
-                >
-                  Descripción *
-                </label>
-                <input
-                  type="text"
-                  id="description"
-                  name="description"
-                  value={formData.description}
-                  onChange={handleChange}
-                  className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 ${
-                    errors.description ? "border-red-500" : "border-gray-300"
-                  }`}
-                  placeholder="Ej: Compra de comida"
-                />
-                {errors.description && (
-                  <p className="text-sm text-red-600 mt-1">
-                    {errors.description}
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label
-                  htmlFor="categoryId"
-                  className="block text-sm mb-2 text-gray-700"
-                >
-                  Categoría *
-                </label>
-                <select
-                  id="categoryId"
-                  name="categoryId"
-                  value={formData.categoryId}
-                  onChange={handleChange}
-                  className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 ${
-                    errors.categoryId ? "border-red-500" : "border-gray-300"
-                  }`}
-                >
-                  <option value="">Selecciona una categoría</option>
-                  {categories.map((category) => (
-                    <option key={category.id} value={category.id}>
-                      {category.name}
-                    </option>
-                  ))}
-                </select>
-                {errors.categoryId && (
-                  <p className="text-sm text-red-600 mt-1">
-                    {errors.categoryId}
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label
-                  htmlFor="transactionDate"
-                  className="block text-sm mb-2 text-gray-700"
-                >
+                <label htmlFor="date" className="block text-sm mb-2 text-gray-700">
                   Fecha *
                 </label>
                 <input
                   type="date"
-                  id="transactionDate"
-                  name="transactionDate"
-                  value={formData.transactionDate}
+                  id="date"
+                  name="date"
+                  value={formData.date}
                   onChange={handleChange}
-                  max={new Date().toISOString().split("T")[0]}
+                  max={new Date().toISOString().split('T')[0]}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  La fecha debe ser menor o igual a la actual
+                </p>
               </div>
 
               <div className="flex space-x-4 pt-4">
@@ -206,7 +165,7 @@ export function AddExpensePage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => navigate("/dashboard")}
+                  onClick={() => navigate('/dashboard')}
                   className="flex-1 bg-gray-200 text-gray-700 py-3 rounded-lg hover:bg-gray-300 transition-colors"
                 >
                   Cancelar
