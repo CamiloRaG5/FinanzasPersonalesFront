@@ -80,7 +80,7 @@ Dado que el usuario está asignando presupuesto, cuando ingresa un valor superio
 Escenario 3: Editar asignación existente
 Dado que el usuario ya asignó presupuesto a una categoría, cuando modifica el valor asignado, entonces el sistema actualiza la información y recalcula el saldo restante.
 
-5. Ver progreso del presupuesto
+6. Ver progreso del presupuesto
 descripcion:
 Como usuario autenticado quiero visualizar el progreso de ejecución de mi presupuesto mensual para conocer cuánto he gastado y cuánto me queda disponible.
 Criterios de aceptacion:
@@ -90,3 +90,63 @@ Escenario 2: Sin gastos registrados
 Dado que el usuario tiene un presupuesto creado, cuando aún no registra gastos, entonces el sistema muestra progreso en 0% y saldo completo disponible.
 Escenario 3: Presupuesto excedido
 Dado que el usuario supera el monto presupuestado, cuando consulta el progreso, entonces el sistema muestra una alerta indicando sobrepaso del presupuesto.
+
+7. Ver presupuesto restante
+descripcion:
+Como usuario quiero visualizar el presupuesto restante de mi periodo actual para saber cuanto dinero me queda disponible y tomar mejores decisiones financieras.
+Criterios de aceptacion:
+Escenario 1: Visualizar presupuesto restante correctamente
+
+Dado que el usuario tiene un presupuesto mensual definido y ha registrado gastos en el mes actual cuando accede a la sección de presupuesto entonces el sistema debe mostrar el presupuesto total,  el total de gastos y el presupuesto restante calculado.
+
+Escenario 2: Usuario sin presupuesto definido
+
+Dado que el usuario no tiene un presupuesto mensual definido cuando accede a la sección de presupuesto entonces el sistema debe mostrar un mensaje indicando que debe crear un presupuesto.
+
+Escenario 3: Presupuesto en negativo
+
+Dado que los gastos del usuario superan el presupuesto mensual cuando accede a la sección de presupuesto entonces el sistema debe mostrar el valor restante en negativo y indicar visualmente que ha excedido el presupuesto.
+
+Escenario 4: Actualización automática del presupuesto
+
+Dado que el usuario tiene un presupuesto definido cuando registra un nuevo gasto entonces el presupuesto restante debe actualizarse automáticamente.
+
+8. Editar presupuesto mensual
+descripcion:
+Como usuario quiero modificar el valor de mi presupuesto mensual para ajustarlo según mis necesidades o cambios en mis ingresos.
+Criterios de aceptacion:
+Escenario 1: Edición exitosa del presupuesto
+
+Dado que el usuario tiene un presupuesto mensual definido, cuando ingresa un nuevo valor válido y guarda los cambios entonces el sistema debe actualizar el presupuesto mensual y mostrar un mensaje de confirmación.
+
+Escenario 2: Validación de valor inválido
+
+Dado que el usuario intenta editar su presupuesto, cuando ingresa un valor no numérico o menor o igual a cero, entonces el sistema debe mostrar un mensaje de error y no debe guardar los cambios.
+
+Escenario 3: Actualización reflejada en el sistema
+
+Dado que el usuario ha editado su presupuesto correctamente, cuando consulta el presupuesto restante entonces el sistema debe reflejar el nuevo valor actualizado.
+
+Escenario 4: Error al guardar cambios
+
+Dado que ocurre un error en el sistema al guardar, cuando el usuario intenta editar el presupuesto, entonces el sistema debe mostrar un mensaje indicando que no se pudo completar la acción.
+
+9. Eliminar presupuesto mensual
+descripcion:
+Como usuario, quiero eliminar mi presupuesto mensual, para reiniciar o dejar de usar la planificación de presupuesto.
+Criterios de aceptacion:
+Escenario 1: Eliminación confirmada
+
+Dado que el usuario tiene un presupuesto mensual definido, cuando selecciona la opción de eliminar presupuesto y confirma la acción, entonces el sistema debe eliminar el presupuesto y mostrar un mensaje de confirmación.
+
+Escenario 2: Cancelación de eliminación
+
+Dado que el usuario selecciona eliminar presupuesto, cuando decide cancelar la acción entonces el presupuesto debe mantenerse sin cambios.
+
+Escenario 3: Eliminación sin presupuesto existente
+
+Dado que el usuario no tiene un presupuesto definido, cuando intenta eliminar el presupuesto entonces el sistema debe mostrar un mensaje indicando que no existe un presupuesto.
+
+Escenario 4: Estado posterior a la eliminación
+
+Dado que el presupuesto ha sido eliminado, cuando el usuario accede a la sección de presupuesto entonces no se debe mostrar información de presupuesto restante y se debe sugerir crear un nuevo presupuesto.

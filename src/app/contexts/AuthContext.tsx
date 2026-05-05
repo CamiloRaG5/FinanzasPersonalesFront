@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 
 interface User {
   id: string;
@@ -7,17 +7,12 @@ interface User {
   email: string;
 }
 
-interface UserWithPassword extends User {
-  password: string;
-}
-
 interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<boolean>;
   register: (firstName: string, lastName: string, email: string, password: string) => Promise<{ success: boolean; message?: string }>;
   logout: () => void;
   isAuthenticated: boolean;
-  verifyPassword: (email: string, password: string) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -32,8 +27,20 @@ export const useAuth = () => {
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [users, setUsers] = useState<UserWithPassword[]>([]);
   const userIdCounter = React.useRef(1);
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem('currentUser');
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    }
+
+    const users = JSON.parse(localStorage.getItem('users') || '[]');
+    if (users.length > 0) {
+      const maxId = Math.max(...users.map((u: any) => parseInt(u.id) || 0));
+      userIdCounter.current = maxId + 1;
+    }
+  }, []);
 
   const register = async (firstName: string, lastName: string, email: string, password: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -53,7 +60,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { success: false, message: 'La contraseña debe tener al menos 8 caracteres, una mayúscula, una minúscula y un número' };
     }
 
-    if (users.some((u) => u.email === email)) {
+    const users = JSON.parse(localStorage.getItem('users') || '[]');
+    if (users.some((u: User) => u.email === email)) {
       return { success: false, message: 'El correo ya está en uso' };
     }
 
@@ -64,15 +72,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       email,
     };
 
-    setUsers([...users, { ...newUser, password }]);
+    users.push({ ...newUser, password });
+    localStorage.setItem('users', JSON.stringify(users));
+    localStorage.setItem('currentUser', JSON.stringify(newUser));
     setUser(newUser);
 
     return { success: true };
   };
 
   const login = async (email: string, password: string) => {
-    const foundUser = users.find((u) => u.email === email && u.password === password);
-
+    const users = JSON.parse(localStorage.getItem('users') || '[]');
+    const foundUser = users.find((u: any) => u.email === email && u.password === password);
+    
     if (foundUser) {
       const userData: User = {
         id: foundUser.id,
@@ -81,6 +92,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         email: foundUser.email,
       };
       setUser(userData);
+      localStorage.setItem('currentUser', JSON.stringify(userData));
       return true;
     }
     return false;
@@ -88,14 +100,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = () => {
     setUser(null);
-  };
-
-  const verifyPassword = (email: string, password: string) => {
-    return users.some((u) => u.email === email && u.password === password);
+    localStorage.removeItem('currentUser');
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, isAuthenticated: !!user, verifyPassword }}>
+    <AuthContext.Provider value={{ user, login, register, logout, isAuthenticated: !!user }}>
       {children}
     </AuthContext.Provider>
   );

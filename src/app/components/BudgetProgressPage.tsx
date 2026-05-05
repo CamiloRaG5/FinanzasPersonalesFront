@@ -14,6 +14,13 @@ export function BudgetProgressPage() {
   const { budgets, updateBudgetAllocation, updateBudget, deleteBudget } = useBudgets();
   const { transactions, categories } = useTransactions();
 
+  const currentMonth = useMemo(() => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    return `${year}-${month}`;
+  }, []);
+
   const [selectedBudgetId, setSelectedBudgetId] = useState<string | null>(null);
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
   const [allocationAmount, setAllocationAmount] = useState('');
@@ -22,13 +29,6 @@ export function BudgetProgressPage() {
   const [budgetIncome, setBudgetIncome] = useState('');
   const [budgetExpenseLimit, setBudgetExpenseLimit] = useState('');
   const [deleteBudgetDialog, setDeleteBudgetDialog] = useState(false);
-
-  const currentMonth = useMemo(() => {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    return `${year}-${month}`;
-  }, []);
 
   const userBudgets = useMemo(() => {
     return budgets

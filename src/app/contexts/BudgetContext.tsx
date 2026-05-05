@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 
 export interface BudgetAllocation {
   category: string;
@@ -37,6 +37,19 @@ export const BudgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const budgetIdCounter = React.useRef(1);
 
+  useEffect(() => {
+    const storedBudgets = localStorage.getItem('budgets');
+    if (storedBudgets) {
+      const parsed = JSON.parse(storedBudgets);
+      setBudgets(parsed);
+
+      if (parsed.length > 0) {
+        const maxId = Math.max(...parsed.map((b: Budget) => parseInt(b.id) || 0));
+        budgetIdCounter.current = maxId + 1;
+      }
+    }
+  }, []);
+
   const createBudget = (budget: Omit<Budget, 'id' | 'allocations'>) => {
     const newBudget: Budget = {
       ...budget,
@@ -44,7 +57,9 @@ export const BudgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       allocations: [],
     };
 
-    setBudgets([...budgets, newBudget]);
+    const updatedBudgets = [...budgets, newBudget];
+    setBudgets(updatedBudgets);
+    localStorage.setItem('budgets', JSON.stringify(updatedBudgets));
   };
 
   const updateBudgetAllocation = (budgetId: string, category: string, amount: number) => {
@@ -61,7 +76,7 @@ export const BudgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       return false;
     }
 
-    setBudgets(budgets.map(b => {
+    const updatedBudgets = budgets.map(b => {
       if (b.id === budgetId) {
         const existingAllocation = b.allocations.find(a => a.category === category);
         if (existingAllocation) {
@@ -79,7 +94,10 @@ export const BudgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         }
       }
       return b;
-    }));
+    });
+
+    setBudgets(updatedBudgets);
+    localStorage.setItem('budgets', JSON.stringify(updatedBudgets));
     return true;
   };
 
@@ -93,9 +111,12 @@ export const BudgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       return false;
     }
 
-    setBudgets(budgets.map(b =>
+    const updatedBudgets = budgets.map(b =>
       b.id === budgetId ? { ...b, income, expenseLimit } : b
-    ));
+    );
+
+    setBudgets(updatedBudgets);
+    localStorage.setItem('budgets', JSON.stringify(updatedBudgets));
     return true;
   };
 
@@ -105,7 +126,9 @@ export const BudgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       return false;
     }
 
-    setBudgets(budgets.filter(b => b.id !== budgetId));
+    const updatedBudgets = budgets.filter(b => b.id !== budgetId);
+    setBudgets(updatedBudgets);
+    localStorage.setItem('budgets', JSON.stringify(updatedBudgets));
     return true;
   };
 

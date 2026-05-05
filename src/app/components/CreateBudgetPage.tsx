@@ -5,6 +5,7 @@ import { Navbar } from "./Navbar";
 import { useAuth } from "../contexts/AuthContext";
 import { useBudgets } from "../contexts/BudgetContext";
 import { DollarSign, Calendar, TrendingDown, AlertCircle } from "lucide-react";
+import { toast } from "sonner";
 
 export function CreateBudgetPage() {
   const navigate = useNavigate();
@@ -56,6 +57,7 @@ export function CreateBudgetPage() {
         expenseLimit: Number(expenseLimit),
       });
 
+      toast.success('Presupuesto creado correctamente');
       navigate('/budget-progress');
     }
   };

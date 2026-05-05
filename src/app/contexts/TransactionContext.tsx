@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 
 export type TransactionType = 'income' | 'expense';
 
@@ -35,13 +35,28 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const transactionIdCounter = React.useRef(1);
 
+  useEffect(() => {
+    const storedTransactions = localStorage.getItem('transactions');
+    if (storedTransactions) {
+      const parsed = JSON.parse(storedTransactions);
+      setTransactions(parsed);
+
+      if (parsed.length > 0) {
+        const maxId = Math.max(...parsed.map((t: Transaction) => parseInt(t.id) || 0));
+        transactionIdCounter.current = maxId + 1;
+      }
+    }
+  }, []);
+
   const addTransaction = (transaction: Omit<Transaction, 'id'>) => {
     const newTransaction: Transaction = {
       ...transaction,
       id: String(transactionIdCounter.current++),
     };
 
-    setTransactions([...transactions, newTransaction]);
+    const updatedTransactions = [...transactions, newTransaction];
+    setTransactions(updatedTransactions);
+    localStorage.setItem('transactions', JSON.stringify(updatedTransactions));
   };
 
   const deleteTransaction = (id: string, userId: string) => {
@@ -55,7 +70,9 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
       return false;
     }
 
-    setTransactions(transactions.filter(t => t.id !== id));
+    const updatedTransactions = transactions.filter(t => t.id !== id);
+    setTransactions(updatedTransactions);
+    localStorage.setItem('transactions', JSON.stringify(updatedTransactions));
     return true;
   };
 
@@ -74,9 +91,12 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
       return false;
     }
 
-    setTransactions(transactions.map(t =>
+    const updatedTransactions = transactions.map(t =>
       t.id === id ? { ...t, category: newCategory } : t
-    ));
+    );
+
+    setTransactions(updatedTransactions);
+    localStorage.setItem('transactions', JSON.stringify(updatedTransactions));
     return true;
   };
 

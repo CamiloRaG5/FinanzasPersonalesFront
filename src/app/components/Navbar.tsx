@@ -43,7 +43,7 @@ export function Navbar() {
             <Link to="/budget-progress" className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md">
               Presupuestos
             </Link>
-            
+
             <div className="flex items-center space-x-4 ml-4 pl-4 border-l border-gray-200">
               <span className="text-sm text-gray-700">
                 {user?.firstName} {user?.lastName}

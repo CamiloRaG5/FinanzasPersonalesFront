@@ -4,9 +4,10 @@ import { Navbar } from "./Navbar";
 import { useAuth } from "../contexts/AuthContext";
 import { useTransactions } from "../contexts/TransactionContext";
 import { TrendingUp, TrendingDown, History, Search, Trash2, Edit2, X, Check } from "lucide-react";
+import { toast } from "sonner";
 
 export function TransactionHistoryPage() {
-  const { user, verifyPassword } = useAuth();
+  const { user } = useAuth();
   const { transactions, deleteTransaction, updateTransactionCategory, categories } = useTransactions();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'income' | 'expense'>('all');
@@ -48,7 +49,10 @@ export function TransactionHistoryPage() {
   const handleDeleteConfirm = () => {
     if (!selectedTransaction || !user) return;
 
-    if (!verifyPassword(user.email, passwordInput)) {
+    const users = JSON.parse(localStorage.getItem('users') || '[]');
+    const foundUser = users.find((u: any) => u.email === user.email && u.password === passwordInput);
+
+    if (!foundUser) {
       setErrorMessage('Contraseña incorrecta');
       return;
     }
@@ -59,6 +63,7 @@ export function TransactionHistoryPage() {
       setDeleteDialogOpen(false);
       setSelectedTransaction(null);
       setPasswordInput('');
+      toast.success('Transacción eliminada correctamente');
     } else {
       setErrorMessage('No se pudo eliminar la transacción');
     }
@@ -73,6 +78,7 @@ export function TransactionHistoryPage() {
       setEditDialogOpen(false);
       setSelectedTransaction(null);
       setNewCategory('');
+      toast.success('Categoría actualizada correctamente');
     } else {
       setErrorMessage('No se pudo actualizar la categoría');
     }

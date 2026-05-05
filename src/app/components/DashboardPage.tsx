@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { ProtectedRoute } from "./ProtectedRoute";
 import { Navbar } from "./Navbar";
 import { useAuth } from "../contexts/AuthContext";
@@ -5,7 +6,6 @@ import { useTransactions } from "../contexts/TransactionContext";
 import { useBudgets } from "../contexts/BudgetContext";
 import { TrendingUp, TrendingDown, Wallet, Plus, PieChart, AlertTriangle } from "lucide-react";
 import { Link } from "react-router";
-import { useMemo } from "react";
 
 export function DashboardPage() {
   const { user } = useAuth();
@@ -13,15 +13,15 @@ export function DashboardPage() {
   const { getBudgetForMonth } = useBudgets();
 
   const userTransactions = transactions.filter(t => t.userId === user?.id);
-
+  
   const totalIncome = userTransactions
     .filter(t => t.type === 'income')
     .reduce((sum, t) => sum + t.amount, 0);
-
+  
   const totalExpense = userTransactions
     .filter(t => t.type === 'expense')
     .reduce((sum, t) => sum + t.amount, 0);
-
+  
   const balance = totalIncome - totalExpense;
 
   const recentTransactions = userTransactions
@@ -63,7 +63,7 @@ export function DashboardPage() {
             <p className="text-gray-600">Aquí está el resumen de tus finanzas</p>
           </div>
 
-          {/* Budget remaining card - shown prominently if budget exists */}
+          {/* Budget Widget */}
           {!currentBudget && (
             <div className="mb-8 bg-blue-50 border-2 border-blue-500 rounded-lg shadow p-6">
               <div className="flex items-center justify-between">
