@@ -6,7 +6,7 @@ import { useTransactions } from "../contexts/TransactionContext";
 import { TrendingUp, TrendingDown, History, Search, Trash2, Edit2, X, Check } from "lucide-react";
 
 export function TransactionHistoryPage() {
-  const { user } = useAuth();
+  const { user, verifyPassword } = useAuth();
   const { transactions, deleteTransaction, updateTransactionCategory, categories } = useTransactions();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'income' | 'expense'>('all');
@@ -48,10 +48,7 @@ export function TransactionHistoryPage() {
   const handleDeleteConfirm = () => {
     if (!selectedTransaction || !user) return;
 
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    const foundUser = users.find((u: any) => u.email === user.email && u.password === passwordInput);
-
-    if (!foundUser) {
+    if (!verifyPassword(user.email, passwordInput)) {
       setErrorMessage('Contraseña incorrecta');
       return;
     }

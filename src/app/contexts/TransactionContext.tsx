@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState } from 'react';
 
 export type TransactionType = 'income' | 'expense';
 
@@ -34,22 +34,13 @@ const defaultCategories = ['Alimentación', 'Transporte', 'Salud', 'Entretenimie
 export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
 
-  useEffect(() => {
-    const storedTransactions = localStorage.getItem('transactions');
-    if (storedTransactions) {
-      setTransactions(JSON.parse(storedTransactions));
-    }
-  }, []);
-
   const addTransaction = (transaction: Omit<Transaction, 'id'>) => {
     const newTransaction: Transaction = {
       ...transaction,
       id: Date.now().toString(),
     };
 
-    const updatedTransactions = [...transactions, newTransaction];
-    setTransactions(updatedTransactions);
-    localStorage.setItem('transactions', JSON.stringify(updatedTransactions));
+    setTransactions([...transactions, newTransaction]);
   };
 
   const deleteTransaction = (id: string, userId: string) => {
@@ -63,9 +54,7 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
       return false;
     }
 
-    const updatedTransactions = transactions.filter(t => t.id !== id);
-    setTransactions(updatedTransactions);
-    localStorage.setItem('transactions', JSON.stringify(updatedTransactions));
+    setTransactions(transactions.filter(t => t.id !== id));
     return true;
   };
 
@@ -84,12 +73,9 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
       return false;
     }
 
-    const updatedTransactions = transactions.map(t =>
+    setTransactions(transactions.map(t =>
       t.id === id ? { ...t, category: newCategory } : t
-    );
-
-    setTransactions(updatedTransactions);
-    localStorage.setItem('transactions', JSON.stringify(updatedTransactions));
+    ));
     return true;
   };
 
