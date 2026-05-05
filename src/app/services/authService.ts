@@ -1,5 +1,12 @@
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
 
+export interface User {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+}
+
 type RegisterPayload = {
   firstName: string;
   lastName: string;
@@ -9,16 +16,16 @@ type RegisterPayload = {
 };
 
 type RegisterResponse = {
-  id: string;
+  id: string | number;
   firstName: string;
   lastName: string;
   email: string;
-  password: string;
+  password?: string;
 };
 
 export async function registerRequest(
   payload: RegisterPayload
-): Promise<RegisterResponse> {
+): Promise<User> {
   const response = await fetch(`${API_URL}/api/v1/auth/register`, {
     method: "POST",
     headers: {
@@ -30,6 +37,7 @@ export async function registerRequest(
   const text = await response.text();
 
   let data: any = null;
+
   try {
     data = text ? JSON.parse(text) : null;
   } catch {
@@ -46,5 +54,44 @@ export async function registerRequest(
     );
   }
 
-  return data;
+  const registeredUser: RegisterResponse = data;
+
+  return {
+    id: String(registeredUser.id),
+    firstName: registeredUser.firstName,
+    lastName: registeredUser.lastName,
+    email: registeredUser.email,
+  };
+}
+
+export async function verifyPasswordRequest(
+  email: string,
+  password: string
+): Promise<boolean> {
+  const response = await fetch(`${API_URL}/api/v1/auth/login`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      email,
+      password,
+    }),
+  });
+
+  const text = await response.text();
+
+  let data: any = null;
+
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    data = text;
+  }
+
+  if (!response.ok) {
+    return false;
+  }
+
+  return true;
 }
