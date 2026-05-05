@@ -35,11 +35,12 @@ export const useBudgets = () => {
 
 export const BudgetProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [budgets, setBudgets] = useState<Budget[]>([]);
+  const budgetIdCounter = React.useRef(1);
 
   const createBudget = (budget: Omit<Budget, 'id' | 'allocations'>) => {
     const newBudget: Budget = {
       ...budget,
-      id: Date.now().toString(),
+      id: String(budgetIdCounter.current++),
       allocations: [],
     };
 

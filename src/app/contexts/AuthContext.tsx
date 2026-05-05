@@ -33,6 +33,7 @@ export const useAuth = () => {
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [users, setUsers] = useState<UserWithPassword[]>([]);
+  const userIdCounter = React.useRef(1);
 
   const register = async (firstName: string, lastName: string, email: string, password: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -57,7 +58,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     const newUser: User = {
-      id: Date.now().toString(),
+      id: String(userIdCounter.current++),
       firstName,
       lastName,
       email,

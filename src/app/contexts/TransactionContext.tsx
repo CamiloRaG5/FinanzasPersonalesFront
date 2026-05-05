@@ -33,11 +33,12 @@ const defaultCategories = ['Alimentación', 'Transporte', 'Salud', 'Entretenimie
 
 export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const transactionIdCounter = React.useRef(1);
 
   const addTransaction = (transaction: Omit<Transaction, 'id'>) => {
     const newTransaction: Transaction = {
       ...transaction,
-      id: Date.now().toString(),
+      id: String(transactionIdCounter.current++),
     };
 
     setTransactions([...transactions, newTransaction]);
