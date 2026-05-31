@@ -9,6 +9,10 @@ import { TransactionHistoryPage } from "./components/TransactionHistoryPage";
 import { CategoriesPage } from "./components/CategoriesPage";
 import { CreateBudgetPage } from "./components/CreateBudgetPage";
 import { BudgetProgressPage } from "./components/BudgetProgressPage";
+import { SettingsPage } from "./components/SettingsPage";
+import { ReportsPage } from "./components/ReportsPage";
+import { AlertSettingsPage } from "./components/AlertSettingsPage";
+import { SavingsRecommendationsPage } from "./components/SavingsRecommendationsPage";
 
 export const router = createBrowserRouter([
   {
@@ -25,6 +29,10 @@ export const router = createBrowserRouter([
       { path: "categories", Component: CategoriesPage },
       { path: "create-budget", Component: CreateBudgetPage },
       { path: "budget-progress", Component: BudgetProgressPage },
+      { path: "settings", Component: SettingsPage },
+      { path: "reports", Component: ReportsPage },
+      { path: "alert-settings", Component: AlertSettingsPage },
+      { path: "savings", Component: SavingsRecommendationsPage },
     ],
   },
 ]);
