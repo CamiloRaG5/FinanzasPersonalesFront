@@ -1,519 +1,449 @@
-import { useMemo, useState } from "react";
+import { useState, useMemo } from "react";
 import { ProtectedRoute } from "./ProtectedRoute";
 import { Navbar } from "./Navbar";
 import { useAuth } from "../contexts/AuthContext";
 import { useTransactions } from "../contexts/TransactionContext";
-import {
-  Clock,
-  Search,
-  TrendingUp,
-  TrendingDown,
-  Trash2,
-  Edit,
-  X,
-} from "lucide-react";
+import { formatCurrency } from "../utils/formatCurrency";
+import { FinancialAlert } from "./FinancialAlert";
+import { TrendingUp, TrendingDown, History, Search, Trash2, Edit2, X, Check, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 export function TransactionHistoryPage() {
   const { user } = useAuth();
-  const {
-    transactions,
-    categories,
-    deleteTransaction,
-    updateTransactionCategory,
-    loading,
-  } = useTransactions();
-
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterType, setFilterType] = useState<"all" | "income" | "expense">(
-    "all"
-  );
-
+  const { transactions, deleteTransaction, updateTransactionCategory, categories } = useTransactions();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterType, setFilterType] = useState<'all' | 'income' | 'expense'>('all');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [selectedTransaction, setSelectedTransaction] = useState<string | null>(null);
+  const [passwordInput, setPasswordInput] = useState('');
+  const [newCategory, setNewCategory] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+  const [dismissedAlerts, setDismissedAlerts] = useState<Set<string>>(new Set());
 
-  const [selectedTransaction, setSelectedTransaction] = useState<string | null>(
-    null
-  );
-
-  const [newCategory, setNewCategory] = useState("");
-  const [passwordInput, setPasswordInput] = useState("");
-  const [errorMessage, setErrorMessage] = useState("");
-
-  const [deleting, setDeleting] = useState(false);
-  const [updating, setUpdating] = useState(false);
-
-  const sortedTransactions = useMemo(() => {
-    return [...transactions].sort(
-      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-    );
-  }, [transactions]);
+  const userTransactions = useMemo(() => {
+    return transactions
+      .filter(t => t.userId === user?.id)
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [transactions, user?.id]);
 
   const filteredTransactions = useMemo(() => {
-    return sortedTransactions.filter((transaction) => {
-      const searchText = searchTerm.toLowerCase().trim();
-
-      const categoryText = String(transaction.category ?? "").toLowerCase();
-      const descriptionText = String(
-        transaction.description ?? ""
-      ).toLowerCase();
-
-      const matchesSearch =
-        !searchText ||
-        categoryText.includes(searchText) ||
-        descriptionText.includes(searchText);
-
-      const matchesType =
-        filterType === "all" || transaction.type === filterType;
-
+    return userTransactions.filter(transaction => {
+      const matchesSearch = transaction.category.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesType = filterType === 'all' || transaction.type === filterType;
       return matchesSearch && matchesType;
     });
-  }, [sortedTransactions, searchTerm, filterType]);
+  }, [userTransactions, searchTerm, filterType]);
 
   const handleDeleteClick = (transactionId: string) => {
     setSelectedTransaction(transactionId);
-    setPasswordInput("");
-    setErrorMessage("");
+    setPasswordInput('');
+    setErrorMessage('');
     setDeleteDialogOpen(true);
   };
 
-  const handleEditClick = (
-    transactionId: string,
-    currentCategoryId: string
-  ) => {
+  const handleEditClick = (transactionId: string, currentCategory: string) => {
     setSelectedTransaction(transactionId);
-    setNewCategory(currentCategoryId);
-    setPasswordInput("");
-    setErrorMessage("");
+    setNewCategory(currentCategory);
+    setErrorMessage('');
     setEditDialogOpen(true);
   };
 
-  const handleCancelDelete = () => {
-    setSelectedTransaction(null);
-    setPasswordInput("");
-    setErrorMessage("");
-    setDeleteDialogOpen(false);
-  };
-
-  const handleCancelEdit = () => {
-    setSelectedTransaction(null);
-    setNewCategory("");
-    setPasswordInput("");
-    setErrorMessage("");
-    setEditDialogOpen(false);
-  };
-
-  const handleDeleteConfirm = async () => {
+  const handleDeleteConfirm = () => {
     if (!selectedTransaction || !user) return;
 
-    if (!passwordInput.trim()) {
-      setErrorMessage("Debes ingresar tu contraseña para confirmar");
-      return;
-    }
+    const success = deleteTransaction(selectedTransaction, user.id);
 
-    try {
-      setDeleting(true);
 
-      const result = await deleteTransaction(selectedTransaction, user.id);
 
-      if (result.success) {
-        setDeleteDialogOpen(false);
-        setSelectedTransaction(null);
-        setPasswordInput("");
-        setErrorMessage("");
-        toast.success("Transacción eliminada correctamente");
-      } else {
-        setErrorMessage(result.message || "No se pudo eliminar la transacción");
-      }
-    } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Error al eliminar la transacción";
+if (success !== false) {
+  setDeleteDialogOpen(false);
+  setSelectedTransaction(null);
+  setPasswordInput('');
+  toast.success('Transacción eliminada correctamente');
+} else {
+  setErrorMessage('No se pudo eliminar la transacción');
+}
 
-      setErrorMessage(message);
-    } finally {
-      setDeleting(false);
+    if (success) {
+      setDeleteDialogOpen(false);
+      setSelectedTransaction(null);
+      setPasswordInput('');
+      toast.success('Transacción eliminada correctamente');
+    } else {
+      setErrorMessage('No se pudo eliminar la transacción');
     }
   };
 
-  const handleEditConfirm = async () => {
+  const handleEditConfirm = () => {
     if (!selectedTransaction || !user) return;
 
-    if (!newCategory) {
-      setErrorMessage("Debes seleccionar una categoría");
-      return;
-    }
+    const success = updateTransactionCategory(selectedTransaction, newCategory, user.id);
 
-    if (!passwordInput.trim()) {
-      setErrorMessage("Debes ingresar tu contraseña para confirmar");
-      return;
-    }
-
-    try {
-      setUpdating(true);
-
-      const result = await updateTransactionCategory(
-        selectedTransaction,
-        newCategory,
-        user.id
-      );
-
-      if (result.success) {
-        setEditDialogOpen(false);
-        setSelectedTransaction(null);
-        setNewCategory("");
-        setPasswordInput("");
-        setErrorMessage("");
-        toast.success("Categoría actualizada correctamente");
-      } else {
-        setErrorMessage(result.message || "No se pudo actualizar la categoría");
-      }
-    } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Error al actualizar la categoría";
-
-      setErrorMessage(message);
-    } finally {
-      setUpdating(false);
+    if (success) {
+      setEditDialogOpen(false);
+      setSelectedTransaction(null);
+      setNewCategory('');
+      toast.success('Categoría actualizada correctamente');
+    } else {
+      setErrorMessage('No se pudo actualizar la categoría');
     }
   };
 
-  const formatMoney = (amount: number) => {
-    return Number(amount).toLocaleString("es-CO", {
-      style: "currency",
-      currency: "COP",
-      minimumFractionDigits: 0,
-    });
+  const selectedTransactionData = selectedTransaction
+    ? transactions.find(t => t.id === selectedTransaction)
+    : null;
+
+  const dismissAlert = (alertId: string) => {
+    setDismissedAlerts(prev => new Set(prev).add(alertId));
   };
 
-  const formatDate = (date: string) => {
-    if (!date) return "Sin fecha";
-
-    const parsedDate = new Date(date);
-
-    if (Number.isNaN(parsedDate.getTime())) {
-      return date;
-    }
-
-    return parsedDate.toLocaleDateString("es-ES", {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    });
+  const isAlertDismissed = (alertId: string) => {
+    return dismissedAlerts.has(alertId);
   };
+
+  // Detectar situaciones para alertas
+  const hasGoodTracking = userTransactions.length >= 10;
+  const totalIncome = filteredTransactions
+    .filter(t => t.type === 'income')
+    .reduce((sum, t) => sum + t.amount, 0);
+  const totalExpense = filteredTransactions
+    .filter(t => t.type === 'expense')
+    .reduce((sum, t) => sum + t.amount, 0);
+  const hasPositiveFlow = totalIncome > totalExpense;
 
   return (
     <ProtectedRoute>
       <div className="min-h-screen bg-gray-50">
         <Navbar />
-
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="mb-6">
-            <div className="flex items-center space-x-4">
-              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                <Clock className="w-5 h-5 text-blue-600" />
+        
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="mb-8">
+            <div className="flex items-center space-x-4 mb-6">
+              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                <History className="w-6 h-6 text-blue-600" />
               </div>
-
               <div>
-                <h1 className="text-3xl text-gray-900">
-                  Historial de Transacciones
-                </h1>
+                <h1 className="text-3xl text-gray-900">Historial de Transacciones</h1>
                 <p className="text-gray-600">
-                  {filteredTransactions.length} transacciones registradas
+                  {userTransactions.length} {userTransactions.length === 1 ? 'transacción registrada' : 'transacciones registradas'}
                 </p>
               </div>
             </div>
-          </div>
 
-          <div className="bg-white rounded-lg shadow p-4 mb-6">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-              <div className="relative md:col-span-2">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-
-                <input
-                  type="text"
-                  placeholder="Buscar por categoría o descripción..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setFilterType("all")}
-                className={`px-4 py-2 rounded-lg transition-colors ${
-                  filterType === "all"
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                }`}
-              >
-                Todas
-              </button>
-
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setFilterType("income")}
-                  className={`px-4 py-2 rounded-lg transition-colors ${
-                    filterType === "income"
-                      ? "bg-green-600 text-white"
-                      : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                  }`}
-                >
-                  Ingresos
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setFilterType("expense")}
-                  className={`px-4 py-2 rounded-lg transition-colors ${
-                    filterType === "expense"
-                      ? "bg-red-600 text-white"
-                      : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                  }`}
-                >
-                  Gastos
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {loading && (
-            <div className="bg-white rounded-lg shadow p-8 text-center text-gray-500">
-              Cargando transacciones...
-            </div>
-          )}
-
-          {!loading && (
-            <div className="bg-white rounded-lg shadow overflow-hidden">
-              {filteredTransactions.length === 0 ? (
-                <div className="p-12 text-center">
-                  <Clock className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-
-                  <p className="text-gray-500 text-lg">
-                    No hay transacciones registradas
-                  </p>
-
-                  <p className="text-sm text-gray-400 mt-2">
-                    Las transacciones aparecerán aquí cuando registres ingresos
-                    o gastos
-                  </p>
+            {/* Filters */}
+            <div className="bg-white rounded-lg shadow p-4 mb-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Buscar por categoría..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
                 </div>
-              ) : (
-                <div className="divide-y divide-gray-200">
-                  {filteredTransactions.map((transaction) => (
-                    <div
-                      key={transaction.id}
-                      className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
-                    >
-                      <div className="flex items-center space-x-4">
-                        <div
-                          className={`w-11 h-11 rounded-full flex items-center justify-center ${
-                            transaction.type === "income"
-                              ? "bg-green-100"
-                              : "bg-red-100"
-                          }`}
-                        >
-                          {transaction.type === "income" ? (
-                            <TrendingUp className="w-5 h-5 text-green-600" />
+
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => setFilterType('all')}
+                    className={`flex-1 py-2 px-4 rounded-lg transition-colors ${
+                      filterType === 'all'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                  >
+                    Todas
+                  </button>
+                  <button
+                    onClick={() => setFilterType('income')}
+                    className={`flex-1 py-2 px-4 rounded-lg transition-colors ${
+                      filterType === 'income'
+                        ? 'bg-green-600 text-white'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                  >
+                    Ingresos
+                  </button>
+                  <button
+                    onClick={() => setFilterType('expense')}
+                    className={`flex-1 py-2 px-4 rounded-lg transition-colors ${
+                      filterType === 'expense'
+                        ? 'bg-amber-500 text-white'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                  >
+                    Gastos
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Financial Alerts */}
+          <div className="space-y-4 mb-6">
+            {/* Alerta: Buen seguimiento de transacciones */}
+            {hasGoodTracking && !isAlertDismissed('good-tracking') && (
+              <FinancialAlert
+                type="success"
+                title="¡Excelente seguimiento financiero!"
+                message={`Tienes ${userTransactions.length} transacciones registradas. Esto demuestra tu compromiso con el control de tus finanzas.`}
+                recommendation="Mantener un registro detallado de tus transacciones te ayuda a identificar patrones y tomar mejores decisiones. ¡Vas por buen camino!"
+                icon={<Sparkles className="w-5 h-5" />}
+                onClose={() => dismissAlert('good-tracking')}
+              />
+            )}
+
+            {/* Alerta: Flujo financiero positivo */}
+            {hasPositiveFlow && filteredTransactions.length > 0 && !isAlertDismissed('positive-flow') && (
+              <FinancialAlert
+                type="success"
+                title="Tu flujo financiero es positivo"
+                message="Tus ingresos superan tus gastos en las transacciones mostradas. Esto refleja una gestión financiera saludable."
+                recommendation="Considera destinar el excedente al ahorro o a algún objetivo financiero que te haga feliz. Cada paso cuenta."
+                onClose={() => dismissAlert('positive-flow')}
+              />
+            )}
+          </div>
+
+          {/* Transactions list */}
+          <div className="bg-white rounded-lg shadow">
+            {filteredTransactions.length === 0 ? (
+              <div className="p-12 text-center">
+                <History className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-500 text-lg mb-2">
+                  {userTransactions.length === 0 
+                    ? 'No hay transacciones disponibles'
+                    : 'No se encontraron transacciones'}
+                </p>
+                <p className="text-sm text-gray-400">
+                  {userTransactions.length === 0 
+                    ? 'Comienza agregando tu primer ingreso o gasto'
+                    : 'Intenta con otro filtro o búsqueda'}
+                </p>
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-200">
+                {filteredTransactions.map((transaction) => (
+                  <div key={transaction.id} className="p-4 hover:bg-gray-50 transition-colors">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-4 flex-1">
+                        <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
+                          transaction.type === 'income' ? 'bg-green-100' : 'bg-red-100'
+                        }`}>
+                          {transaction.type === 'income' ? (
+                            <TrendingUp className="w-6 h-6 text-green-600" />
                           ) : (
-                            <TrendingDown className="w-5 h-5 text-red-600" />
+                            <TrendingDown className="w-6 h-6 text-red-600" />
                           )}
                         </div>
-
-                        <div>
-                          <p className="text-gray-900">
-                            {transaction.description ||
-                              transaction.category ||
-                              "Sin descripción"}
-                          </p>
-
-                          <p className="text-sm text-gray-500">
-                            {transaction.category} ·{" "}
-                            {formatDate(transaction.date)}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center space-x-3">
+                            <p className="text-gray-900">{transaction.category}</p>
+                            <span className={`px-2 py-1 rounded-full text-xs ${
+                              transaction.type === 'income'
+                                ? 'bg-green-100 text-green-700'
+                                : 'bg-red-100 text-red-700'
+                            }`}>
+                              {transaction.type === 'income' ? 'Ingreso' : 'Gasto'}
+                            </span>
+                          </div>
+                          <p className="text-sm text-gray-500 mt-1">
+                            {new Date(transaction.date).toLocaleDateString('es-ES', {
+                              weekday: 'long',
+                              day: 'numeric',
+                              month: 'long',
+                              year: 'numeric'
+                            })}
                           </p>
                         </div>
                       </div>
-
                       <div className="flex items-center space-x-4">
-                        <p
-                          className={`text-lg ${
-                            transaction.type === "income"
-                              ? "text-green-600"
-                              : "text-red-600"
-                          }`}
-                        >
-                          {transaction.type === "income" ? "+" : "-"}
-                          {formatMoney(transaction.amount)}
+                        <p className={`text-xl ${
+                          transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
+                        }`}>
+                          {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}
                         </p>
-
-                        <button
-                          type="button"
-                          onClick={() =>
-                            handleEditClick(
-                              transaction.id,
-                              transaction.categoryId
-                            )
-                          }
-                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                          title="Editar categoría"
-                        >
-                          <Edit className="w-5 h-5" />
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteClick(transaction.id)}
-                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                          title="Eliminar transacción"
-                        >
-                          <Trash2 className="w-5 h-5" />
-                        </button>
+                        <div className="flex space-x-2">
+                          <button
+                            onClick={() => handleEditClick(transaction.id, transaction.category)}
+                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="Editar categoría"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteClick(transaction.id)}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Eliminar transacción"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  ))}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Summary stats */}
+          {filteredTransactions.length > 0 && (
+            <div className="mt-6 bg-white rounded-lg shadow p-6">
+              <h3 className="text-lg text-gray-900 mb-4">Resumen del Filtro</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">Total Transacciones</p>
+                  <p className="text-2xl text-blue-600">{filteredTransactions.length}</p>
                 </div>
-              )}
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">Total Ingresos</p>
+                  <p className="text-2xl text-green-600">
+                    {formatCurrency(filteredTransactions
+                      .filter(t => t.type === 'income')
+                      .reduce((sum, t) => sum + t.amount, 0))}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">Total Gastos</p>
+                  <p className="text-2xl text-red-600">
+                    {formatCurrency(filteredTransactions
+                      .filter(t => t.type === 'expense')
+                      .reduce((sum, t) => sum + t.amount, 0))}
+                  </p>
+                </div>
+              </div>
             </div>
           )}
         </div>
 
+        {/* Delete Confirmation Dialog */}
         {deleteDialogOpen && (
-          <div className="fixed inset-0 bg-black/40 flex items-center justify-center px-4 z-50">
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl text-gray-900">
-                  Eliminar transacción
-                </h2>
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg max-w-md w-full p-6">
+              <h3 className="text-xl text-gray-900 mb-4">Confirmar Eliminación</h3>
 
-                <button
-                  type="button"
-                  onClick={handleCancelDelete}
-                  className="p-1 rounded-lg hover:bg-gray-100"
-                >
-                  <X className="w-5 h-5 text-gray-500" />
-                </button>
-              </div>
+              {selectedTransactionData && (
+                <div className="mb-4 p-4 bg-gray-50 rounded-lg">
+                  <p className="text-sm text-gray-600 mb-2">Vas a eliminar la siguiente transacción:</p>
+                  <div className="space-y-1">
+                    <p className="text-gray-900">
+                      <span className="font-medium">Tipo:</span> {selectedTransactionData.type === 'income' ? 'Ingreso' : 'Gasto'}
+                    </p>
+                    <p className="text-gray-900">
+                      <span className="font-medium">Categoría:</span> {selectedTransactionData.category}
+                    </p>
+                    <p className="text-gray-900">
+                      <span className="font-medium">Monto:</span> {formatCurrency(selectedTransactionData.amount)}
+                    </p>
+                    <p className="text-gray-900">
+                      <span className="font-medium">Fecha:</span> {new Date(selectedTransactionData.date).toLocaleDateString('es-ES')}
+                    </p>
+                  </div>
+                </div>
+              )}
 
-              <p className="text-gray-600 mb-4">
-                ¿Seguro que deseas eliminar esta transacción? Esta acción no se
-                puede deshacer.
-              </p>
+              <p className="text-sm text-gray-600 mb-4">Para confirmar, ingresa tu contraseña:</p>
 
               <input
                 type="password"
                 value={passwordInput}
                 onChange={(e) => {
                   setPasswordInput(e.target.value);
-                  setErrorMessage("");
+                  setErrorMessage('');
                 }}
-                placeholder="Ingresa tu contraseña"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg mb-3 focus:outline-none focus:ring-2 focus:ring-red-500"
+                placeholder="Contraseña"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 mb-4"
               />
 
               {errorMessage && (
-                <p className="text-sm text-red-600 mb-3">{errorMessage}</p>
+                <p className="text-sm text-red-600 mb-4">{errorMessage}</p>
               )}
 
               <div className="flex space-x-3">
                 <button
-                  type="button"
-                  onClick={handleCancelDelete}
-                  disabled={deleting}
-                  className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 disabled:opacity-60"
+                  onClick={() => {
+                    setDeleteDialogOpen(false);
+                    setSelectedTransaction(null);
+                    setPasswordInput('');
+                    setErrorMessage('');
+                  }}
+                  className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors flex items-center justify-center space-x-2"
                 >
-                  Cancelar
+                  <X className="w-4 h-4" />
+                  <span>Cancelar</span>
                 </button>
-
                 <button
-                  type="button"
                   onClick={handleDeleteConfirm}
-                  disabled={deleting}
-                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-60"
+                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center space-x-2"
                 >
-                  {deleting ? "Eliminando..." : "Eliminar"}
+                  <Trash2 className="w-4 h-4" />
+                  <span>Eliminar</span>
                 </button>
               </div>
             </div>
           </div>
         )}
 
+        {/* Edit Category Dialog */}
         {editDialogOpen && (
-          <div className="fixed inset-0 bg-black/40 flex items-center justify-center px-4 z-50">
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl text-gray-900">
-                  Actualizar categoría
-                </h2>
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg max-w-md w-full p-6">
+              <h3 className="text-xl text-gray-900 mb-4">Editar Categoría</h3>
 
-                <button
-                  type="button"
-                  onClick={handleCancelEdit}
-                  className="p-1 rounded-lg hover:bg-gray-100"
-                >
-                  <X className="w-5 h-5 text-gray-500" />
-                </button>
-              </div>
+              {selectedTransactionData && (
+                <div className="mb-4 p-4 bg-gray-50 rounded-lg">
+                  <p className="text-sm text-gray-600 mb-2">Transacción actual:</p>
+                  <div className="space-y-1">
+                    <p className="text-gray-900">
+                      <span className="font-medium">Categoría actual:</span> {selectedTransactionData.category}
+                    </p>
+                    <p className="text-gray-900">
+                      <span className="font-medium">Monto:</span> {formatCurrency(selectedTransactionData.amount)}
+                    </p>
+                  </div>
+                </div>
+              )}
 
-              <div className="mb-4">
-                <label className="block text-sm mb-2 text-gray-700">
-                  Nueva categoría
-                </label>
-
-                <select
-                  value={newCategory}
-                  onChange={(e) => {
-                    setNewCategory(e.target.value);
-                    setErrorMessage("");
-                  }}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">Selecciona una categoría</option>
-
-                  {categories.map((category) => (
-                    <option key={category.id} value={category.id}>
-                      {category.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <input
-                type="password"
-                value={passwordInput}
+              <label className="block text-sm text-gray-700 mb-2">Nueva categoría:</label>
+              <select
+                value={newCategory}
                 onChange={(e) => {
-                  setPasswordInput(e.target.value);
-                  setErrorMessage("");
+                  setNewCategory(e.target.value);
+                  setErrorMessage('');
                 }}
-                placeholder="Ingresa tu contraseña"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg mb-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4"
+              >
+                {categories.map(category => (
+                  <option key={category} value={category}>{category}</option>
+                ))}
+              </select>
 
               {errorMessage && (
-                <p className="text-sm text-red-600 mb-3">{errorMessage}</p>
+                <p className="text-sm text-red-600 mb-4">{errorMessage}</p>
               )}
 
               <div className="flex space-x-3">
                 <button
-                  type="button"
-                  onClick={handleCancelEdit}
-                  disabled={updating}
-                  className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 disabled:opacity-60"
+                  onClick={() => {
+                    setEditDialogOpen(false);
+                    setSelectedTransaction(null);
+                    setNewCategory('');
+                    setErrorMessage('');
+                  }}
+                  className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors flex items-center justify-center space-x-2"
                 >
-                  Cancelar
+                  <X className="w-4 h-4" />
+                  <span>Cancelar</span>
                 </button>
-
                 <button
-                  type="button"
                   onClick={handleEditConfirm}
-                  disabled={updating}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-60"
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2"
                 >
-                  {updating ? "Actualizando..." : "Actualizar"}
+                  <Check className="w-4 h-4" />
+                  <span>Guardar</span>
                 </button>
               </div>
             </div>

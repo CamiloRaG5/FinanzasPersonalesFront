@@ -15,24 +15,24 @@ interface AuthContextType {
   user: User | null;
 
   login: (
-    email:string,
-    password:string
+    email: string,
+    password: string
   ) => Promise<boolean>;
 
   register: (
-    firstName:string,
-    lastName:string,
-    email:string,
-    password:string,
-    passwordConfirmation:string
+    firstName: string,
+    lastName: string,
+    email: string,
+    password: string,
+    passwordConfirmation: string
   ) => Promise<{
-    success:boolean;
-    message?:string;
+    success: boolean;
+    message?: string;
   }>;
 
   logout: () => void;
 
-  isAuthenticated:boolean;
+  isAuthenticated: boolean;
 }
 
 const AuthContext =
@@ -45,7 +45,7 @@ export const useAuth = () => {
   const context =
     useContext(AuthContext);
 
-  if(!context){
+  if (!context) {
     throw new Error(
       "useAuth must be used within AuthProvider"
     );
@@ -54,29 +54,29 @@ export const useAuth = () => {
   return context;
 };
 
-export const AuthProvider:React.FC<{
-  children:React.ReactNode;
+export const AuthProvider: React.FC<{
+  children: React.ReactNode;
 }> = ({ children }) => {
 
-  const [user,setUser] =
+  const [user, setUser] =
     useState<User | null>(null);
 
-  useEffect(()=>{
+  useEffect(() => {
 
     const storedUser =
       localStorage.getItem(
         "currentUser"
       );
 
-    if(storedUser){
+    if (storedUser) {
 
-      try{
+      try {
 
         setUser(
           JSON.parse(storedUser)
         );
 
-      }catch{
+      } catch {
 
         localStorage.removeItem(
           "currentUser"
@@ -85,14 +85,14 @@ export const AuthProvider:React.FC<{
       }
     }
 
-  },[]);
+  }, []);
 
   const register = async (
-    firstName:string,
-    lastName:string,
-    email:string,
-    password:string,
-    passwordConfirmation:string
+    firstName: string,
+    lastName: string,
+    email: string,
+    password: string,
+    passwordConfirmation: string
   ) => {
 
     const cleanFirstName =
@@ -104,24 +104,24 @@ export const AuthProvider:React.FC<{
     const cleanEmail =
       email.trim().toLowerCase();
 
-    try{
+    try {
 
       await registerRequest({
-        firstName:cleanFirstName,
-        lastName:cleanLastName,
-        email:cleanEmail,
+        firstName: cleanFirstName,
+        lastName: cleanLastName,
+        email: cleanEmail,
         password,
         passwordConfirmation,
       });
 
       return {
-        success:true,
+        success: true,
       };
 
-    }catch(error){
+    } catch (error) {
 
       return {
-        success:false,
+        success: false,
         message:
           error instanceof Error
             ? error.message
@@ -131,11 +131,11 @@ export const AuthProvider:React.FC<{
   };
 
   const login = async (
-    email:string,
-    password:string
+    email: string,
+    password: string
   ) => {
 
-    try{
+    try {
 
       const result =
         await loginRequest(
@@ -143,9 +143,9 @@ export const AuthProvider:React.FC<{
           password
         );
 
-      const currentUser:User = {
-        id:result.userId,
-        email:result.email,
+      const currentUser: User = {
+        id: result.userId,
+        email: result.email,
       };
 
       setUser(currentUser);
@@ -157,7 +157,7 @@ export const AuthProvider:React.FC<{
 
       return true;
 
-    }catch(error){
+    } catch (error) {
 
       console.error(error);
 
@@ -189,7 +189,7 @@ export const AuthProvider:React.FC<{
         login,
         register,
         logout,
-        isAuthenticated:!!user,
+        isAuthenticated: !!user,
       }}
     >
       {children}
