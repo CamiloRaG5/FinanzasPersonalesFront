@@ -53,7 +53,13 @@ export function RegisterPage() {
       return;
     }
 
-    const result = await register(formData.firstName, formData.lastName, formData.email, formData.password);
+    const result = await register(
+  formData.firstName,
+  formData.lastName,
+  formData.email,
+  formData.password,
+  formData.confirmPassword
+);
 
     if (result.success) {
       toast.success('Registro exitoso. Por favor inicia sesión.');
