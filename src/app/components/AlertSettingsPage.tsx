@@ -1,65 +1,161 @@
-import { useState } from "react";
+import { useState, useEffect  } from "react";
 import { ProtectedRoute } from "./ProtectedRoute";
 import { Navbar } from "./Navbar";
 import { Bell, DollarSign, TrendingDown, AlertCircle, Save, Check } from "lucide-react";
 import { toast } from "sonner";
+import {
+  updateAlertSettingsRequest,
+  getAlertSettingsRequest,
+  getAlertPreferencesRequest,
+  updateAlertPreferenceRequest
+} from "../services/alertsService";
+import { useAuth } from "../contexts/AuthContext";
 
 export function AlertSettingsPage() {
   // Estados visuales (NO persistentes - solo durante la sesión)
-  const [budgetAlerts, setBudgetAlerts] = useState(true);
-  const [expenseAlerts, setExpenseAlerts] = useState(true);
-  const [savingsReminders, setSavingsReminders] = useState(false);
-  const [monthlyReports, setMonthlyReports] = useState(true);
 
   const [expenseLimit, setExpenseLimit] = useState('');
   const [budgetThreshold, setBudgetThreshold] = useState('80');
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const { user } = useAuth();
+  const [preferences, setPreferences] = useState<Record<string, boolean>>({});
+  const [settings, setSettings] = useState(null);
 
-  const handleSaveExpenseLimit = () => {
-    const newErrors: Record<string, string> = {};
 
-    if (!expenseLimit) {
-      newErrors.expenseLimit = 'El límite de gasto es obligatorio';
-      setErrors(newErrors);
-      toast.error('Por favor ingresa un límite de gasto');
-      return;
-    }
+  const ALERT_TYPE_MAP: Record<string, string> = {
+  budget: "BUDGET_LIMIT",
+  expense: "HIGH_EXPENSE",
+  savings: "SAVINGS_REMINDER",
+  monthly: "MONTHLY_REPORT",
+};
 
-    const limit = Number(expenseLimit);
+  const handleSaveExpenseLimit = async () => {
+  const newErrors: Record<string, string> = {};
 
-    if (isNaN(limit)) {
-      newErrors.expenseLimit = 'El valor debe ser un número válido';
-      setErrors(newErrors);
-      toast.error('El valor debe ser un número válido');
-      return;
-    }
+  if (!expenseLimit) {
+    newErrors.expenseLimit = "El límite de gasto es obligatorio";
+    setErrors(newErrors);
+    toast.error("Por favor ingresa un límite de gasto");
+    return;
+  }
 
-    if (limit <= 0) {
-      newErrors.expenseLimit = 'El límite debe ser mayor a cero';
-      setErrors(newErrors);
-      toast.error('El límite debe ser mayor a cero');
-      return;
-    }
+  const limit = Number(expenseLimit);
+
+  if (isNaN(limit) || limit <= 0) {
+    newErrors.expenseLimit = "El valor debe ser un número válido mayor a cero";
+    setErrors(newErrors);
+    toast.error("El valor debe ser válido");
+    return;
+  }
+
+  try {
+    await updateAlertSettingsRequest(user.id, {
+      expenseLimit: limit,
+      budgetThreshold: Number(budgetThreshold),
+    });
 
     setErrors({});
-    toast.success(`Límite de gasto configurado: ${limit}`);
+    toast.success("Límite de gasto guardado correctamente");
+  } catch (err) {
+    console.error(err);
+    toast.error("Error guardando límite de gasto");
+  }
+};
+
+  const handleSaveThreshold = async () => {
+  const threshold = Number(budgetThreshold);
+
+  if (isNaN(threshold) || threshold < 0 || threshold > 100) {
+    toast.error("El porcentaje debe estar entre 0 y 100");
+    return;
+  }
+
+  try {
+    await updateAlertSettingsRequest(user.id, {
+      expenseLimit: Number(expenseLimit || 0),
+      budgetThreshold: threshold,
+    });
+
+    setBudgetThreshold(String(threshold));
+
+    toast.success("Umbral de alerta guardado correctamente");
+  } catch (err) {
+    console.error(err);
+    toast.error("Error guardando umbral");
+  }
+};
+
+  const handleToggle = async (alertType: string) => {
+  const backendType = ALERT_TYPE_MAP[alertType];
+
+  if (!backendType) {
+    toast.error("Tipo de alerta inválido");
+    return;
+  }
+
+  const current = preferences[alertType] ?? false;
+  const newValue = !current;
+
+  // 1. UI inmediata (optimista)
+  setPreferences(prev => ({
+    ...prev,
+    [alertType]: newValue
+  }));
+
+  try {
+    // 2. Guardar en backend
+    await updateAlertPreferenceRequest(
+      user.id,
+      backendType,
+      newValue
+    );
+
+    toast.success("Preferencia actualizada");
+  } catch (err) {
+    console.error(err);
+
+    // 3. rollback si falla
+    setPreferences(prev => ({
+      ...prev,
+      [alertType]: current
+    }));
+
+    toast.error("Error actualizando preferencia");
+  }
+};
+
+
+  useEffect(() => {
+  if (!user?.id) return;
+
+  const loadSettings = async () => {
+    const data = await getAlertSettingsRequest(user.id);
+
+    setExpenseLimit(String(data.expenseLimit ?? ""));
+    setBudgetThreshold(String(data.budgetThreshold ?? 80));
   };
 
-  const handleSaveThreshold = () => {
-    const threshold = Number(budgetThreshold);
+  loadSettings();
+}, [user?.id]);
 
-    if (isNaN(threshold) || threshold < 0 || threshold > 100) {
-      toast.error('El porcentaje debe estar entre 0 y 100');
-      return;
-    }
 
-    toast.success(`Umbral de alerta configurado: ${threshold}%`);
+useEffect(() => {
+  if (!user?.id) return;
+
+  const loadPreferences = async () => {
+    const data = await getAlertPreferencesRequest(user.id);
+
+    const mapped: Record<string, boolean> = {};
+
+    data.preferences.forEach((pref: any) => {
+      mapped[pref.alertType] = pref.enabled;
+    });
+
+    setPreferences(mapped);
   };
 
-  const handleToggle = (setter: React.Dispatch<React.SetStateAction<boolean>>, currentValue: boolean, name: string) => {
-    setter(!currentValue);
-    toast.info(`Alertas de ${name} ${!currentValue ? 'activadas' : 'desactivadas'}`);
-  };
+  loadPreferences();
+}, [user?.id]);
 
   return (
     <ProtectedRoute>
@@ -99,14 +195,14 @@ export function AlertSettingsPage() {
                   </div>
                 </div>
                 <button
-                  onClick={() => handleToggle(setBudgetAlerts, budgetAlerts, 'presupuesto')}
+                  onClick={() => handleToggle('budget')}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    budgetAlerts ? 'bg-blue-600' : 'bg-gray-200'
+                    preferences['budget'] ? 'bg-blue-600' : 'bg-gray-200'
                   }`}
                 >
                   <span
                     className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                      budgetAlerts ? 'translate-x-6' : 'translate-x-1'
+                      preferences['budget'] ? 'translate-x-6' : 'translate-x-1'
                     }`}
                   />
                 </button>
@@ -124,14 +220,14 @@ export function AlertSettingsPage() {
                   </div>
                 </div>
                 <button
-                  onClick={() => handleToggle(setExpenseAlerts, expenseAlerts, 'gastos altos')}
+                  onClick={() => handleToggle('expense')}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    expenseAlerts ? 'bg-blue-600' : 'bg-gray-200'
+                    preferences['expense'] ? 'bg-blue-600' : 'bg-gray-200'
                   }`}
                 >
                   <span
                     className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                      expenseAlerts ? 'translate-x-6' : 'translate-x-1'
+                      preferences['expense'] ? 'translate-x-6' : 'translate-x-1'
                     }`}
                   />
                 </button>
@@ -149,14 +245,14 @@ export function AlertSettingsPage() {
                   </div>
                 </div>
                 <button
-                  onClick={() => handleToggle(setSavingsReminders, savingsReminders, 'ahorro')}
+                  onClick={() => handleToggle('savings')}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    savingsReminders ? 'bg-blue-600' : 'bg-gray-200'
+                    preferences['savings'] ? 'bg-blue-600' : 'bg-gray-200'
                   }`}
                 >
                   <span
                     className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                      savingsReminders ? 'translate-x-6' : 'translate-x-1'
+                      preferences['savings'] ? 'translate-x-6' : 'translate-x-1'
                     }`}
                   />
                 </button>
@@ -174,14 +270,14 @@ export function AlertSettingsPage() {
                   </div>
                 </div>
                 <button
-                  onClick={() => handleToggle(setMonthlyReports, monthlyReports, 'reportes mensuales')}
+                  onClick={() => handleToggle('monthly')}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    monthlyReports ? 'bg-blue-600' : 'bg-gray-200'
+                    preferences['monthly'] ? 'bg-blue-600' : 'bg-gray-200'
                   }`}
                 >
                   <span
                     className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                      monthlyReports ? 'translate-x-6' : 'translate-x-1'
+                      preferences['monthly'] ? 'translate-x-6' : 'translate-x-1'
                     }`}
                   />
                 </button>
@@ -306,20 +402,20 @@ export function AlertSettingsPage() {
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="flex items-center space-x-2">
-                <div className={`w-2 h-2 rounded-full ${budgetAlerts ? 'bg-green-500' : 'bg-gray-300'}`} />
-                <span className="text-sm text-gray-700">Alertas de Presupuesto: {budgetAlerts ? 'Activas' : 'Inactivas'}</span>
+                <div className={`w-2 h-2 rounded-full ${preferences["budget"] ? 'bg-green-500' : 'bg-gray-300'}`} />
+                <span className="text-sm text-gray-700">Alertas de Presupuesto: {preferences["budget"] ? 'Activas' : 'Inactivas'}</span>
               </div>
               <div className="flex items-center space-x-2">
-                <div className={`w-2 h-2 rounded-full ${expenseAlerts ? 'bg-green-500' : 'bg-gray-300'}`} />
-                <span className="text-sm text-gray-700">Alertas de Gastos: {expenseAlerts ? 'Activas' : 'Inactivas'}</span>
+                <div className={`w-2 h-2 rounded-full ${preferences["expense"] ? 'bg-green-500' : 'bg-gray-300'}`} />
+                <span className="text-sm text-gray-700">Alertas de Gastos: {preferences["expense"] ? 'Activas' : 'Inactivas'}</span>
               </div>
               <div className="flex items-center space-x-2">
-                <div className={`w-2 h-2 rounded-full ${savingsReminders ? 'bg-green-500' : 'bg-gray-300'}`} />
-                <span className="text-sm text-gray-700">Recordatorios de Ahorro: {savingsReminders ? 'Activos' : 'Inactivos'}</span>
+                <div className={`w-2 h-2 rounded-full ${preferences["savings"] ? 'bg-green-500' : 'bg-gray-300'}`} />
+                <span className="text-sm text-gray-700">Recordatorios de Ahorro: {preferences["savings"] ? 'Activos' : 'Inactivos'}</span>
               </div>
               <div className="flex items-center space-x-2">
-                <div className={`w-2 h-2 rounded-full ${monthlyReports ? 'bg-green-500' : 'bg-gray-300'}`} />
-                <span className="text-sm text-gray-700">Reportes Mensuales: {monthlyReports ? 'Activos' : 'Inactivos'}</span>
+                <div className={`w-2 h-2 rounded-full ${preferences["monthly"] ? 'bg-green-500' : 'bg-gray-300'}`} />
+                <span className="text-sm text-gray-700">Reportes Mensuales: {preferences["monthly"] ? 'Activos' : 'Inactivos'}</span>
               </div>
             </div>
           </div>

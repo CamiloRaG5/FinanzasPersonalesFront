@@ -52,15 +52,18 @@ export function TransactionHistoryPage() {
   const handleDeleteConfirm = () => {
     if (!selectedTransaction || !user) return;
 
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    const foundUser = users.find((u: any) => u.email === user.email && u.password === passwordInput);
-
-    if (!foundUser) {
-      setErrorMessage('Contraseña incorrecta');
-      return;
-    }
-
     const success = deleteTransaction(selectedTransaction, user.id);
+
+
+
+if (success !== false) {
+  setDeleteDialogOpen(false);
+  setSelectedTransaction(null);
+  setPasswordInput('');
+  toast.success('Transacción eliminada correctamente');
+} else {
+  setErrorMessage('No se pudo eliminar la transacción');
+}
 
     if (success) {
       setDeleteDialogOpen(false);
