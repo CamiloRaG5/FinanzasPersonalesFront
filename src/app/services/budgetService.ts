@@ -176,6 +176,17 @@ function normalizeBudget(budget: any): BudgetResponse {
   };
 }
 
+function getAuthHeaders() {
+
+  const token =
+    localStorage.getItem("token");
+
+  return {
+    "Content-Type":"application/json",
+    Authorization:`Bearer ${token}`,
+  };
+}
+
 function normalizeBudgetProgress(data: any): BudgetProgressResponse {
   const globalSummary = data?.globalSummary ?? {};
 
@@ -208,9 +219,7 @@ export async function createBudgetRequest(
 ): Promise<BudgetResponse> {
   const response = await fetch(`${API_URL}/api/v1/budgets`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: getAuthHeaders(),
     body: JSON.stringify({
       userId: payload.userId,
       month: normalizeMonthForBackend(payload.month),
@@ -261,9 +270,7 @@ export async function updateBudgetRequest(
     )}`,
     {
       method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: getAuthHeaders(),
       body: JSON.stringify({
         newTotalIncome,
         newLimit,
@@ -289,6 +296,7 @@ export async function deleteBudgetRequest(
     )}`,
     {
       method: "DELETE",
+      headers:getAuthHeaders(),
     }
   );
 
@@ -305,9 +313,7 @@ export async function createBudgetAllocationRequest(
     `${API_URL}/api/v1/budgets/${cleanBudgetId}/allocations`,
     {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: getAuthHeaders(),
       body: JSON.stringify({
         userId: payload.userId,
         categoryId: payload.categoryId,
@@ -331,9 +337,7 @@ export async function updateBudgetAllocationRequest(
     `${API_URL}/api/v1/budgets/${cleanBudgetId}/allocations/${cleanCategoryId}`,
     {
       method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: getAuthHeaders(),
       body: JSON.stringify({
         userId: payload.userId,
         newAmount: payload.newAmount,
@@ -354,7 +358,10 @@ export async function getBudgetProgressRequest(
   const response = await fetch(
     `${API_URL}/api/v1/budgets/${cleanUserId}/progress?month=${encodeURIComponent(
       cleanMonth
-    )}`
+    )}`,
+     {
+    headers:getAuthHeaders(),
+  }
   );
 
   const data = await parseResponse(response);

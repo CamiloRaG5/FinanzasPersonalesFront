@@ -1,142 +1,185 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
-import { registerRequest, type User } from "../services/authService";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+} from "react";
+
+import {
+  registerRequest,
+  loginRequest,
+  type User,
+} from "../services/authService";
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string) => Promise<boolean>;
+
+  login: (
+    email:string,
+    password:string
+  ) => Promise<boolean>;
+
   register: (
-    firstName: string,
-    lastName: string,
-    email: string,
-    password: string,
-    passwordConfirmation: string
-  ) => Promise<{ success: boolean; message?: string }>;
+    firstName:string,
+    lastName:string,
+    email:string,
+    password:string,
+    passwordConfirmation:string
+  ) => Promise<{
+    success:boolean;
+    message?:string;
+  }>;
+
   logout: () => void;
-  isAuthenticated: boolean;
+
+  isAuthenticated:boolean;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext =
+  createContext<AuthContextType | undefined>(
+    undefined
+  );
 
 export const useAuth = () => {
-  const context = useContext(AuthContext);
 
-  if (!context) {
-    throw new Error("useAuth must be used within AuthProvider");
+  const context =
+    useContext(AuthContext);
+
+  if(!context){
+    throw new Error(
+      "useAuth must be used within AuthProvider"
+    );
   }
 
   return context;
 };
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => {
-  const [user, setUser] = useState<User | null>(null);
+export const AuthProvider:React.FC<{
+  children:React.ReactNode;
+}> = ({ children }) => {
 
-  useEffect(() => {
-    const storedUser = localStorage.getItem("currentUser");
+  const [user,setUser] =
+    useState<User | null>(null);
 
-    if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch {
-        localStorage.removeItem("currentUser");
+  useEffect(()=>{
+
+    const storedUser =
+      localStorage.getItem(
+        "currentUser"
+      );
+
+    if(storedUser){
+
+      try{
+
+        setUser(
+          JSON.parse(storedUser)
+        );
+
+      }catch{
+
+        localStorage.removeItem(
+          "currentUser"
+        );
+
       }
     }
-  }, []);
+
+  },[]);
 
   const register = async (
-    firstName: string,
-    lastName: string,
-    email: string,
-    password: string,
-    passwordConfirmation: string
+    firstName:string,
+    lastName:string,
+    email:string,
+    password:string,
+    passwordConfirmation:string
   ) => {
-    const cleanFirstName = firstName.trim();
-    const cleanLastName = lastName.trim();
-    const cleanEmail = email.trim().toLowerCase();
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const cleanFirstName =
+      firstName.trim();
 
-    if (!emailRegex.test(cleanEmail)) {
-      return {
-        success: false,
-        message: "El correo no es válido",
-      };
-    }
+    const cleanLastName =
+      lastName.trim();
 
-    if (
-      cleanFirstName.length < 2 ||
-      !/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(cleanFirstName)
-    ) {
-      return {
-        success: false,
-        message: "El nombre es inválido",
-      };
-    }
+    const cleanEmail =
+      email.trim().toLowerCase();
 
-    if (
-      cleanLastName.length < 2 ||
-      !/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(cleanLastName)
-    ) {
-      return {
-        success: false,
-        message: "El apellido es inválido",
-      };
-    }
+    try{
 
-    if (
-      password.length < 8 ||
-      !/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password)
-    ) {
-      return {
-        success: false,
-        message:
-          "La contraseña debe tener al menos 8 caracteres, una mayúscula, una minúscula y un número",
-      };
-    }
-
-    if (password !== passwordConfirmation) {
-      return {
-        success: false,
-        message: "Las contraseñas no coinciden",
-      };
-    }
-
-    try {
-      const registeredUser = await registerRequest({
-        firstName: cleanFirstName,
-        lastName: cleanLastName,
-        email: cleanEmail,
+      await registerRequest({
+        firstName:cleanFirstName,
+        lastName:cleanLastName,
+        email:cleanEmail,
         password,
         passwordConfirmation,
       });
 
-      setUser(registeredUser);
-      localStorage.setItem("currentUser", JSON.stringify(registeredUser));
+      return {
+        success:true,
+      };
+
+    }catch(error){
 
       return {
-        success: true,
-      };
-    } catch (error) {
-      return {
-        success: false,
+        success:false,
         message:
           error instanceof Error
             ? error.message
-            : "Error al registrar el usuario",
+            : "Error al registrar",
       };
     }
   };
 
-  const login = async (email: string, password: string) => {
-    console.log("Login pendiente de conectar al backend:", email, password);
+  const login = async (
+    email:string,
+    password:string
+  ) => {
 
-    return false;
+    try{
+
+      const result =
+        await loginRequest(
+          email,
+          password
+        );
+
+      const currentUser:User = {
+        id:result.userId,
+        email:result.email,
+      };
+
+      setUser(currentUser);
+
+      localStorage.setItem(
+        "currentUser",
+        JSON.stringify(currentUser)
+      );
+
+      return true;
+
+    }catch(error){
+
+      console.error(error);
+
+      return false;
+    }
   };
 
   const logout = () => {
+
     setUser(null);
-    localStorage.removeItem("currentUser");
+
+    localStorage.removeItem(
+      "currentUser"
+    );
+
+    localStorage.removeItem(
+      "token"
+    );
+
+    localStorage.removeItem(
+      "userId"
+    );
   };
 
   return (
@@ -146,7 +189,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         login,
         register,
         logout,
-        isAuthenticated: !!user,
+        isAuthenticated:!!user,
       }}
     >
       {children}
