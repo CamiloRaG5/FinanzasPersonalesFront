@@ -5,7 +5,12 @@ export interface Category {
   name: string;
 }
 
+function getToken() {
+  return localStorage.getItem("token");
+}
+
 async function parseResponse(response: Response) {
+
   const text = await response.text();
 
   let data: any = null;
@@ -20,7 +25,7 @@ async function parseResponse(response: Response) {
     throw new Error(
       typeof data === "object" && data?.message
         ? data.message
-        : typeof data === "string" && data
+        : typeof data === "string"
         ? data
         : "Error al obtener categorías"
     );
@@ -31,29 +36,42 @@ async function parseResponse(response: Response) {
 
 function normalizeCategory(category: any): Category {
   return {
-    id: String(category.id ?? category.categoryId ?? category._id),
+    id: String(
+      category.id ??
+      category.categoryId ??
+      category._id
+    ),
+
     name: String(
       category.name ??
-        category.categoryName ??
-        category.nombre ??
-        category.description ??
-        "Sin nombre"
+      category.categoryName ??
+      category.nombre ??
+      "Sin nombre"
     ),
   };
 }
 
 export async function getCategoriesRequest(): Promise<Category[]> {
-  const response = await fetch(`${API_URL}/api/v1/categories`);
+
+  const token = getToken();
+
+  const response = await fetch(
+    `${API_URL}/api/v1/categories`,
+    {
+      headers:{
+        Authorization:`Bearer ${token}`,
+      },
+    }
+  );
 
   const data = await parseResponse(response);
 
-  const list = Array.isArray(data)
-    ? data
-    : Array.isArray(data?.data)
-    ? data.data
-    : Array.isArray(data?.categories)
-    ? data.categories
-    : [];
+  const list =
+    Array.isArray(data)
+      ? data
+      : Array.isArray(data?.data)
+      ? data.data
+      : [];
 
   return list.map(normalizeCategory);
 }
